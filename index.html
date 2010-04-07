@@ -5,6 +5,7 @@
         <title>untitled</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
         <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
+        <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.min.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/binaryXHR.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFile.js"></script>
@@ -19,7 +20,11 @@
                 url: url,
                 dataType: 'text',
                 beforeSend: function(request) {
-                    request.overrideMimeType('text/plain; charset=x-user-defined');
+                    try {
+                        request.overrideMimeType('text/plain; charset=x-user-defined');
+                    } catch(e) {
+                        // IE doesn't support overrideMimeType
+                    }
                 },
                 success: function(data) {
                     try {
@@ -29,6 +34,13 @@
                     }
                 },
                 error: function(xhr, textStatus, errorThrown) {
+                    // Special case for IE which handles binary data slightly
+                    // differently.
+                    if(textStatus == 'parsererror') {
+                        if (typeof xhr.responseBody != 'undefined') {
+                            return this.success(xhr.responseBody);
+                        }
+                    }
                     d.errback(new Error(xhr.status));
                 }
             });
@@ -55,8 +67,7 @@
 
                     jQuery.each(results, function(i, result) {
                         rrd = result[1];
-                        var series = rrdRRA2FlotObj(result[1], 5, [0, 1], 1, 1);
-                        console.log(series);
+                        var series = rrdRRA2FlotObj(rrd, 3, [0, 1], 1, 1);
                         data = data.concat(series.data);
                     });
 
@@ -70,7 +81,7 @@
 
                 function(failure) {
                     err = failure;
-                    $('.container').text('error: ' + err);
+                    $('.container').text('error: ' + failure.message);
                 });
         });
         </script>
