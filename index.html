@@ -13,9 +13,14 @@
         <script type="text/javascript" src="assets/javascript/MochiKit/Base.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Async.js"></script>
         <script type="text/javascript">
-        var rrd, err;
-        function downloadRRD(url) {
+        var RrdDataWrapper = function(url, rrd) {
+            this.url = url;
+            this.rrd = rrd;
+        }
+
+        RrdDataWrapper.load = function(url) {
             var d = new MochiKit.Async.Deferred();
+
             $.ajax({
                 url: url,
                 dataType: 'text',
@@ -28,7 +33,10 @@
                 },
                 success: function(data) {
                     try {
-                        d.callback(new RRDFile(new BinaryFile(data)));
+                        d.callback(
+                            new RrdDataWrapper(
+                                url,
+                                new RRDFile(new BinaryFile(data))));
                     } catch(e) {
                         d.errback(e);
                     }
@@ -47,38 +55,56 @@
             return d;
         }
 
+        RrdDataWrapper.prototype = {
+            getData: function(consolidationFunc, targetResolution) {
+                var bestRRA = null;
+                for(var i=0; i<this.rrd.getNrRRAs(); i++) {
+                    // Look through all RRAs looking for the most suitable
+                    // data resolution.
+                    var rra = this.rrd.getRRA(i);
+
+                    if(rra.getCFName() != consolidationFunc) {
+                        continue;
+                    }
+
+                    if(!bestRRA) {
+                        bestRRA = rra;
+                        continue;
+                    }
+
+                    var bestDiff = Math.abs(bestRRA.getStep() - targetResolution);
+                    var newDiff = Math.abs(rra.getStep() - targetResolution);
+                    if(newDiff < bestDiff) {
+                        bestRRA = rra;
+                    } else {
+                        break;
+                    }
+                }
+
+                if(!bestRRA) {
+                    throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
+                }
+
+                return rrdRRA2FlotObj(this.rrd, bestRRA.getIdx(),
+                                      this.rrd.getDSNames(), 1, 1).data;
+            }
+        };
+
         $(function() {
-            var urls = [
-                'data/localhost/interface/if_packets-eth0.rrd',
-                'data/localhost/interface/if_packets-lo.rrd'
-            ];
+            var d = RrdDataWrapper.load('data/localhost/load/load.rrd');
 
-            var results = []
-            jQuery.each(urls, function(i, url) {
-                var d = downloadRRD(url);
-                results.push(d);
-            });
-
-            dl = new MochiKit.Async.DeferredList(results);
-
-            dl.addCallbacks(
-                function(results) {
-                    data = [];
-
-                    jQuery.each(results, function(i, result) {
-                        rrd = result[1];
-                        var series = rrdRRA2FlotObj(rrd, 3, [0, 1], 1, 1);
-                        data = data.concat(series.data);
-                    });
-
-                    options = {
+            d.addCallback(
+                function(rrd) {
+                    var options = {
                         xaxis: {
                             mode: "time"
                         }
                     };
+                    var data = rrd.getData('AVERAGE', 100);
                     var plot = $.plot($('.container'), data, options);
-                },
+                });
 
+            d.addErrback(
                 function(failure) {
                     err = failure;
                     $('.container').text('error: ' + failure.message);
