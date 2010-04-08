@@ -7,15 +7,18 @@
         <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.min.js"></script>
+        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.selection.min.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/binaryXHR.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFile.js"></script>
-        <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFlotSupport.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Base.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Async.js"></script>
         <script type="text/javascript">
+        var grrd;
+
         var RrdDataWrapper = function(url, rrd) {
             this.url = url;
             this.rrd = rrd;
+            grrd = rrd;
         }
 
         RrdDataWrapper.load = function(url) {
@@ -56,7 +59,10 @@
         }
 
         RrdDataWrapper.prototype = {
-            getData: function(consolidationFunc, targetResolution) {
+            getData: function(startTime, endTime) {
+                var startTimestamp = startTime.getTime()/1000;
+                var endTimestamp = endTime.getTime()/1000;
+                var consolidationFunc = 'AVERAGE';
                 var bestRRA = null;
                 for(var i=0; i<this.rrd.getNrRRAs(); i++) {
                     // Look through all RRAs looking for the most suitable
@@ -66,17 +72,12 @@
                     if(rra.getCFName() != consolidationFunc) {
                         continue;
                     }
-
-                    if(!bestRRA) {
-                        bestRRA = rra;
-                        continue;
-                    }
-
-                    var bestDiff = Math.abs(bestRRA.getStep() - targetResolution);
-                    var newDiff = Math.abs(rra.getStep() - targetResolution);
-                    if(newDiff < bestDiff) {
-                        bestRRA = rra;
-                    } else {
+                    bestRRA = rra;
+                    var step = rra.getStep();
+                    var rraRowCount = rra.getNrRows();
+                    var lastUpdated = this.rrd.getLastUpdate();
+                    var firstUpdated = lastUpdated - (rraRowCount - 1) * step;
+                    if(firstUpdated <= startTimestamp) {
                         break;
                     }
                 }
@@ -85,30 +86,64 @@
                     throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
                 }
 
-                return rrdRRA2FlotObj(this.rrd, bestRRA.getIdx(),
-                                      this.rrd.getDSNames(), 1, 1).data;
+                startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
+                endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
+                returnData = [];
+                for(var d=this.rrd.getNrDSs()-1; d>=0; d--) {
+                    flotData = [];
+                    timestamp = firstUpdated + (startRow - 1) * step;
+                    for (var i=startRow; i<=endRow; i++) {
+                        var val = bestRRA.getEl(i, d);
+                        flotData.push([timestamp*1000.0, val]);
+                        timestamp += step;
+                    }
+                    returnData.push({label: this.rrd.getDS(d).getName(), data: flotData});
+                }
+                return returnData;
+            }
+        };
+
+        var graphOptions = {
+            grid: {
+                clickable: true
+            },
+            selection: {
+                mode: 'x'
+            },
+            series: {
+                points: { show: false },
+                lines: {
+                    show: true,
+                    steps: false,
+                    shadowSize: 0,
+                    lineWidth: 1
+                },
+                shadowSize: 0
+            },
+            xaxis: {
+                mode: "time"
             }
         };
 
         $(function() {
-            var d = RrdDataWrapper.load('data/localhost/load/load.rrd');
-
-            d.addCallback(
-                function(rrd) {
-                    var options = {
-                        xaxis: {
-                            mode: "time"
-                        }
-                    };
-                    var data = rrd.getData('AVERAGE', 100);
-                    var plot = $.plot($('.container'), data, options);
-                });
-
-            d.addErrback(
-                function(failure) {
-                    err = failure;
-                    $('.container').text('error: ' + failure.message);
-                });
+            RrdDataWrapper
+                .load('data/localhost/load/load.rrd')
+                .addCallback(
+                    function(rrd) {
+                        var data = rrd.getData(
+                            new Date('7 April 2010 12:30:00'),
+                            new Date('7 April 2010 15:00:00'));
+                        var plot = $.plot($('.container'), data, graphOptions);
+                    })
+                .addErrback(
+                    function(failure) {
+                        $('.container').text('error: ' + failure.message);
+                    });
+            $('.container').bind('plotclick', function(event, pos, item) {
+                if (item) {
+                    console.log(['X: ' + new Date(item.datapoint[0]), 'Y: ' + item.datapoint[1]]);
+                }
+            });
         });
         </script>
     </head>
