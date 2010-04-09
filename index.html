@@ -21,6 +21,7 @@
             $.ajax({
                 url: url,
                 dataType: 'text',
+                cache: false,
                 beforeSend: function(request) {
                     try {
                         request.overrideMimeType('text/plain; charset=x-user-defined');
@@ -148,11 +149,8 @@
             }
         };
 
-        $(function() {
-            new RrdDataWrapper('data/localhost/load/load.rrd')
-                .getData(
-                    new Date('7 April 2010 09:30:00'),
-                    new Date('7 April 2010 11:00:00'))
+        function drawChart(db, startTime, endTime) {
+            return db.getData(startTime, endTime)
                 .addCallback(
                     function(data) {
                         var plot = $.plot($('.container'), data, graphOptions);
@@ -161,10 +159,25 @@
                     function(failure) {
                         $('.container').text('error: ' + failure.message);
                     });
+        }
+
+        var db = new RrdDataWrapper('data/localhost/load/load.rrd');
+
+        $(function() {
+            drawChart(db, new Date('7 April 2010 09:30:00'),
+                          new Date('7 April 2010 15:00:00'));
+
             $('.container').bind('plotclick', function(event, pos, item) {
                 if (item) {
                     console.log(['X: ' + new Date(item.datapoint[0]), 'Y: ' + item.datapoint[1]]);
                 }
+            });
+
+            $('.container').bind("plotselected", function(event, ranges) {
+                var startTime = new Date(ranges.xaxis.from);
+                var endTime = new Date(ranges.xaxis.to);
+                drawChart(db, startTime, endTime);
+                console.log("You selected " + startTime + " to " + endTime);
             });
         });
         </script>
