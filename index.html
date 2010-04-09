@@ -15,13 +15,7 @@
         <script type="text/javascript">
         var grrd;
 
-        var RrdDataWrapper = function(url, rrd) {
-            this.url = url;
-            this.rrd = rrd;
-            grrd = rrd;
-        }
-
-        RrdDataWrapper.load = function(url) {
+        function downloadBinary(url) {
             var d = new MochiKit.Async.Deferred();
 
             $.ajax({
@@ -36,10 +30,7 @@
                 },
                 success: function(data) {
                     try {
-                        d.callback(
-                            new RrdDataWrapper(
-                                url,
-                                new RRDFile(new BinaryFile(data))));
+                        d.callback(new BinaryFile(data));
                     } catch(e) {
                         d.errback(e);
                     }
@@ -58,16 +49,49 @@
             return d;
         }
 
+        var RrdDataWrapper = function(url) {
+            this.url = url;
+            this._rrd = null;
+        }
+
         RrdDataWrapper.prototype = {
             getData: function(startTime, endTime) {
+                var endTimestamp = endTime.getTime()/1000;
+
+                var d, self = this;
+                if(!this._rrd || this._rrd.getLastUpdate() < endTimestamp) {
+                    d = downloadBinary(this.url)
+                            .addCallback(
+                                function(binary) {
+                                    var rrd = new RRDFile(binary);
+                                    self._rrd = rrd;
+                                    return rrd;
+                                });
+                } else {
+                    d = new MochiKit.Async.Deferred()
+                    d.callback(this._rrd);
+                }
+
+                d.addCallback(
+                    function(rrd) {
+                        return self._getData(startTime, endTime);
+                    });
+
+                return d;
+            },
+
+            _getData: function(startTime, endTime) {
                 var startTimestamp = startTime.getTime()/1000;
                 var endTimestamp = endTime.getTime()/1000;
+
                 var consolidationFunc = 'AVERAGE';
+                var lastUpdated = this._rrd.getLastUpdate();
+
                 var bestRRA = null;
-                for(var i=0; i<this.rrd.getNrRRAs(); i++) {
+                for(var i=0; i<this._rrd.getNrRRAs(); i++) {
                     // Look through all RRAs looking for the most suitable
                     // data resolution.
-                    var rra = this.rrd.getRRA(i);
+                    var rra = this._rrd.getRRA(i);
 
                     if(rra.getCFName() != consolidationFunc) {
                         continue;
@@ -75,7 +99,6 @@
                     bestRRA = rra;
                     var step = rra.getStep();
                     var rraRowCount = rra.getNrRows();
-                    var lastUpdated = this.rrd.getLastUpdate();
                     var firstUpdated = lastUpdated - (rraRowCount - 1) * step;
                     if(firstUpdated <= startTimestamp) {
                         break;
@@ -89,7 +112,7 @@
                 startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
                 endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
                 returnData = [];
-                for(var d=this.rrd.getNrDSs()-1; d>=0; d--) {
+                for(var d=this._rrd.getNrDSs()-1; d>=0; d--) {
                     flotData = [];
                     timestamp = firstUpdated + (startRow - 1) * step;
                     for (var i=startRow; i<=endRow; i++) {
@@ -97,7 +120,7 @@
                         flotData.push([timestamp*1000.0, val]);
                         timestamp += step;
                     }
-                    returnData.push({label: this.rrd.getDS(d).getName(), data: flotData});
+                    returnData.push({label: this._rrd.getDS(d).getName(), data: flotData});
                 }
                 return returnData;
             }
@@ -126,13 +149,12 @@
         };
 
         $(function() {
-            RrdDataWrapper
-                .load('data/localhost/load/load.rrd')
+            new RrdDataWrapper('data/localhost/load/load.rrd')
+                .getData(
+                    new Date('7 April 2010 09:30:00'),
+                    new Date('7 April 2010 11:00:00'))
                 .addCallback(
-                    function(rrd) {
-                        var data = rrd.getData(
-                            new Date('7 April 2010 12:30:00'),
-                            new Date('7 April 2010 15:00:00'));
+                    function(data) {
                         var plot = $.plot($('.container'), data, graphOptions);
                     })
                 .addErrback(
