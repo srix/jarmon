@@ -4,6 +4,17 @@
     <head>
         <title>untitled</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+        <style type="text/css">
+        .chart {
+            width:800px;
+            height:200px;
+            margin: 50px auto 50px auto;
+        }
+        .tickLabel {
+            width:100px;
+            overflow:hidden;
+        }
+        </style>
         <script type="text/javascript" src="assets/javascript/jquery-1.4.2.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.js"></script>
@@ -52,9 +63,9 @@
             data = 'cpu-user.rrd  cpu-system.rrd  cpu-wait.rrd'.split('  ').reverse();
 
             jQuery.each(data, function(i, el) {
-                var url = 'data/localhost/cpu-0/' + el;
                 var label = el.split('.')[0].split('-')[1];
-                c.addData(label, new jrrd.RrdQueryRemote(url));
+                c.addData('cpu0-' + label, new jrrd.RrdQueryRemote('data/cpu-0/' + el));
+                c.addData('cpu1-' + label, new jrrd.RrdQueryRemote('data/cpu-1/' + el));
             });
             return c;
         }
@@ -64,8 +75,20 @@
             data = 'memory-free.rrd memory-cached.rrd memory-used.rrd memory-buffered.rrd'.split(' ').reverse();
 
             jQuery.each(data, function(i, el) {
-                var url = 'data/localhost/memory/' + el;
+                var url = 'data/memory/' + el;
                 var label = el.split('.')[0].split('-')[1];
+                c.addData(label, new jrrd.RrdQueryRemote(url));
+            });
+            return c;
+        }
+
+        function dnsChartFactory(template) {
+            var c = new jrrd.Chart(template, baseOptions);
+            data = 'dns_opcode-Query.rrd  dns_qtype-A.rrd  dns_qtype-PTR.rrd  dns_rcode-NOERROR.rrd'.split('  ').reverse();
+
+            jQuery.each(data, function(i, el) {
+                var url = 'data/dns/' + el;
+                var label = el.split('.')[0].split('_')[1];
                 c.addData(label, new jrrd.RrdQueryRemote(url));
             });
             return c;
@@ -73,7 +96,7 @@
 
         function loadChartFactory(template) {
             var c = new jrrd.Chart(template, baseOptions);
-            var data = new jrrd.RrdQueryRemote('data/localhost/load/load.rrd');
+            var data = new jrrd.RrdQueryRemote('data/load/load.rrd');
             var rrdDSs = ['shortterm', 'midterm', 'longterm'];
             jQuery.each(rrdDSs, function(i, rrdDS) {
                 c.addData(rrdDS, new jrrd.RrdQueryDsProxy(data, rrdDS));
@@ -83,7 +106,7 @@
 
         function nicChartFactory(template, nicname) {
             var c = new jrrd.Chart(template, baseOptions);
-            var data = new jrrd.RrdQueryRemote('data/localhost/interface/if_octets-' + nicname + '.rrd');
+            var data = new jrrd.RrdQueryRemote('data/interface/if_octets-' + nicname + '.rrd');
             var rrdDSs = ['tx', 'rx'];
             jQuery.each(rrdDSs, function(i, rrdDS) {
                 c.addData(rrdDS, new jrrd.RrdQueryDsProxy(data, rrdDS));
@@ -94,14 +117,14 @@
         $(function() {
             var chartTemplate = $('.chart').remove();
             var charts = [
+                dnsChartFactory(
+                    chartTemplate.clone().appendTo('.charts')),
+
                 loadChartFactory(
                     chartTemplate.clone().appendTo('.charts')),
 
                 nicChartFactory(
-                    chartTemplate.clone().appendTo('.charts'), 'lo'),
-
-                nicChartFactory(
-                    chartTemplate.clone().appendTo('.charts'), 'eth0'),
+                    chartTemplate.clone().appendTo('.charts'), 'wlan0'),
 
                 cpuChartFactory(
                     chartTemplate.clone().appendTo('.charts')),
@@ -111,8 +134,8 @@
             ];
 
             jQuery.each(charts, function(i, chart) {
-                chart.draw(new Date('7 April 2010 09:30:00'),
-                           new Date('10 April 2010 15:00:00'));
+                chart.draw(new Date('10 April 2010 19:30:00'),
+                           new Date());
             });
 
             $('.chart').bind("plotselected", function(event, ranges) {
@@ -128,7 +151,7 @@
 
     <body>
         <div class="charts">
-            <div class="chart" style="width:800px; height:200px; float: right; clear: right;"></div>
+            <div class="chart"></div>
         </div>
     </body>
 </html>
