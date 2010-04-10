@@ -71,21 +71,22 @@
             return c;
         }
 
-        var RrdQueryDsProxy = function(rrdQuery, dsId) {
-            this.rrdQuery = rrdQuery;
-            this.dsId = dsId;
-        };
-
-        RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
-            return this.rrdQuery.getData(startTime, endTime, this.dsId);
-        };
-
         function loadChartFactory(template) {
             var c = new jrrd.Chart(template, baseOptions);
             var data = new jrrd.RrdQueryRemote('data/localhost/load/load.rrd');
             var rrdDSs = ['shortterm', 'midterm', 'longterm'];
             jQuery.each(rrdDSs, function(i, rrdDS) {
-                c.addData(rrdDS, new RrdQueryDsProxy(data, rrdDS));
+                c.addData(rrdDS, new jrrd.RrdQueryDsProxy(data, rrdDS));
+            });
+            return c;
+        }
+
+        function nicChartFactory(template, nicname) {
+            var c = new jrrd.Chart(template, baseOptions);
+            var data = new jrrd.RrdQueryRemote('data/localhost/interface/if_octets-' + nicname + '.rrd');
+            var rrdDSs = ['tx', 'rx'];
+            jQuery.each(rrdDSs, function(i, rrdDS) {
+                c.addData(rrdDS, new jrrd.RrdQueryDsProxy(data, rrdDS));
             });
             return c;
         }
@@ -96,6 +97,12 @@
                 loadChartFactory(
                     chartTemplate.clone().appendTo('.charts')),
 
+                nicChartFactory(
+                    chartTemplate.clone().appendTo('.charts'), 'lo'),
+
+                nicChartFactory(
+                    chartTemplate.clone().appendTo('.charts'), 'eth0'),
+
                 cpuChartFactory(
                     chartTemplate.clone().appendTo('.charts')),
 
@@ -105,7 +112,7 @@
 
             jQuery.each(charts, function(i, chart) {
                 chart.draw(new Date('7 April 2010 09:30:00'),
-                           new Date('7 April 2010 15:00:00'));
+                           new Date('10 April 2010 15:00:00'));
             });
 
             $('.chart').bind("plotselected", function(event, ranges) {

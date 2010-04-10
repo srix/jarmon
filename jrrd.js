@@ -54,6 +54,10 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
     var consolidationFunc = 'AVERAGE';
     var lastUpdated = this.rrd.getLastUpdate();
 
+    // If end time stamp is beyond the range of this rrd then reset it
+    if(lastUpdated < endTimestamp) {
+        endTimestamp = lastUpdated;
+    }
     var bestRRA = null;
     for(var i=0; i<this.rrd.getNrRRAs(); i++) {
         // Look through all RRAs looking for the most suitable
@@ -76,8 +80,8 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
         throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
     }
 
-    var startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
-    var endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
+    var startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step) - 1;
+    var endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step) - 1;
 
     var flotData = [];
     var timestamp = firstUpdated + (startRow - 1) * step;
@@ -100,8 +104,6 @@ jrrd.RrdQueryRemote = function(url) {
 jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     var endTimestamp = endTime.getTime()/1000;
 
-    var self = this;
-
     // Download the rrd if there has never been a download or if the last
     // completed download had a lastUpdated timestamp less than the requested
     // end time.
@@ -109,42 +111,50 @@ jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     if(!this._download || (this._download.fired > -1 && this.lastUpdate < endTimestamp )) {
         this._download = jrrd.downloadBinary(this.url)
                 .addCallback(
-                    function(binary) {
+                    function(self, binary) {
                         // Upon successful download convert the resulting binary
                         // into an RRD file and pass it on to the next callback
                         // in the chain.
                         var rrd = new RRDFile(binary);
                         self.lastUpdate = rrd.getLastUpdate();
                         return rrd;
-                    });
+                    }, this);
     }
 
     // Set up a deferred which will call getData on the local RrdQuery object
     // returning a flot compatible data object to the caller.
     var ret = new MochiKit.Async.Deferred().addCallback(
-        function(rrd) {
+        function(startTime, endTime, dsId, rrd) {
             return new jrrd.RrdQuery(rrd).getData(startTime, endTime, dsId);
-        });
+        }, startTime, endTime, dsId);
 
     // Add a pair of callbacks to the current download which will callback the
     // result which we setup above.
-    this._download.addCallbacks(
-        function(res) {
-            ret.callback(res);
+    this._download.addBoth(
+        function(ret, res) {
+            if(res instanceof Error) {
+                ret.errback(res);
+            } else {
+                ret.callback(res);
+            }
             return res;
-        },
-        function(err) {
-            ret.errback(err);
-            return err;
-        });
+        }, ret);
 
     return ret;
 };
 
 
-jrrd.Chart = function(template, options) {
-    var self = this;
+jrrd.RrdQueryDsProxy = function(rrdQuery, dsId) {
+    this.rrdQuery = rrdQuery;
+    this.dsId = dsId;
+};
 
+jrrd.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
+    return this.rrdQuery.getData(startTime, endTime, this.dsId);
+};
+
+
+jrrd.Chart = function(template, options) {
     this.template = template;
     this.options = options;
     this.data = [];
@@ -155,8 +165,6 @@ jrrd.Chart.prototype.addData = function(label, db) {
 };
 
 jrrd.Chart.prototype.draw = function(startTime, endTime) {
-    var self = this;
-
     var results = [];
     for(var i=0; i<this.data.length; i++) {
         results.push(this.data[i][1].getData(startTime, endTime));
@@ -164,14 +172,14 @@ jrrd.Chart.prototype.draw = function(startTime, endTime) {
 
     return MochiKit.Async.gatherResults(results)
             .addCallback(
-                function(data) {
+                function(self, data) {
                     for(var i=0; i<data.length; i++) {
                         data[i].label = self.data[i][0];
                     }
                     var plot = $.plot(self.template, data, self.options);
-                })
+                }, this)
             .addErrback(
-                function(failure) {
+                function(self, failure) {
                     self.template.text('error: ' + failure.message);
-                });
+                }, this);
 };
