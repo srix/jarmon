@@ -16,7 +16,7 @@
         <script type="text/javascript" src="jrrd.js"></script>
         <script type="text/javascript">
 
-        var graphOptions = {
+        var baseOptions = {
             grid: {
                 clickable: true
             },
@@ -24,12 +24,10 @@
                 mode: 'x'
             },
             series: {
-                stack: true,
                 points: { show: false },
                 lines: {
                     show: true,
                     steps: false,
-                    fill: 0.5,
                     shadowSize: 0,
                     lineWidth: 1
                 },
@@ -40,56 +38,17 @@
             }
         };
 
-        var Chart = function(template) {
-            var self = this;
-
-            this.template = template;
-            this.data = [];
-
-            this.template.bind('plotclick', function(event, pos, item) {
-                if (item) {
-                    console.log(['X: ' + new Date(item.datapoint[0]),
-                                 'Y: ' + item.datapoint[1]]);
+        var fillOptions = jQuery.extend(true, {
+            series: {
+                stack: true,
+                lines: {
+                    fill: 0.5
                 }
-            });
-
-            this.template.bind("plotselected", function(event, ranges) {
-                var startTime = new Date(ranges.xaxis.from);
-                var endTime = new Date(ranges.xaxis.to);
-                self.draw(startTime, endTime);
-                console.log("You selected " + startTime + " to " + endTime);
-            });
-        };
-
-        Chart.prototype.addData = function(label, db) {
-            this.data.push([label, db]);
-        };
-
-        Chart.prototype.draw = function(startTime, endTime) {
-            var self = this;
-
-            var results = [];
-            for(var i=0; i<this.data.length; i++) {
-                results.push(this.data[i][1].getData(startTime, endTime));
             }
+        }, baseOptions);
 
-            return MochiKit.Async.gatherResults(results)
-                   .addCallback(
-                    function(data) {
-                        for(var i=0; i<data.length; i++) {
-                            data[i].label = self.data[i][0];
-                        }
-                        var plot = $.plot(self.template, data, graphOptions);
-                    })
-                   .addErrback(
-                    function(failure) {
-                        $('.container').text('error: ' + failure.message);
-                    });
-        };
-
-        $(function() {
-            var c = new Chart($('.container'));
-            //data = 'memory-free.rrd memory-cached.rrd memory-used.rrd memory-buffered.rrd'.split(' ').reverse();
+        function cpuChartFactory(template) {
+            var c = new jrrd.Chart(template, fillOptions);
             data = 'cpu-user.rrd  cpu-system.rrd  cpu-wait.rrd'.split('  ').reverse();
 
             jQuery.each(data, function(i, el) {
@@ -97,14 +56,72 @@
                 var label = el.split('.')[0].split('-')[1];
                 c.addData(label, new jrrd.RrdQueryRemote(url));
             });
+            return c;
+        }
 
-            c.draw(new Date('7 April 2010 09:30:00'),
-                   new Date('7 April 2010 15:00:00'));
+        function memoryChartFactory(template) {
+            var c = new jrrd.Chart(template, fillOptions);
+            data = 'memory-free.rrd memory-cached.rrd memory-used.rrd memory-buffered.rrd'.split(' ').reverse();
+
+            jQuery.each(data, function(i, el) {
+                var url = 'data/localhost/memory/' + el;
+                var label = el.split('.')[0].split('-')[1];
+                c.addData(label, new jrrd.RrdQueryRemote(url));
+            });
+            return c;
+        }
+
+        var RrdQueryDsProxy = function(rrdQuery, dsId) {
+            this.rrdQuery = rrdQuery;
+            this.dsId = dsId;
+        };
+
+        RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
+            return this.rrdQuery.getData(startTime, endTime, this.dsId);
+        };
+
+        function loadChartFactory(template) {
+            var c = new jrrd.Chart(template, baseOptions);
+            var data = new jrrd.RrdQueryRemote('data/localhost/load/load.rrd');
+            var rrdDSs = ['shortterm', 'midterm', 'longterm'];
+            jQuery.each(rrdDSs, function(i, rrdDS) {
+                c.addData(rrdDS, new RrdQueryDsProxy(data, rrdDS));
+            });
+            return c;
+        }
+
+        $(function() {
+            var chartTemplate = $('.chart').remove();
+            var charts = [
+                loadChartFactory(
+                    chartTemplate.clone().appendTo('.charts')),
+
+                cpuChartFactory(
+                    chartTemplate.clone().appendTo('.charts')),
+
+                memoryChartFactory(
+                    chartTemplate.clone().appendTo('.charts'))
+            ];
+
+            jQuery.each(charts, function(i, chart) {
+                chart.draw(new Date('7 April 2010 09:30:00'),
+                           new Date('7 April 2010 15:00:00'));
+            });
+
+            $('.chart').bind("plotselected", function(event, ranges) {
+                var startTime = new Date(ranges.xaxis.from);
+                var endTime = new Date(ranges.xaxis.to);
+                jQuery.each(charts, function(i, chart) {
+                    chart.draw(startTime, endTime);
+                });
+            });
         });
         </script>
     </head>
 
     <body>
-        <div class="container" style="width:100%; height:200px;"></div>
+        <div class="charts">
+            <div class="chart" style="width:800px; height:200px; float: right; clear: right;"></div>
+        </div>
     </body>
 </html>

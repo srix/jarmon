@@ -51,7 +51,6 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
         dsId = 0;
     }
     var ds = this.rrd.getDS(dsId);
-
     var consolidationFunc = 'AVERAGE';
     var lastUpdated = this.rrd.getLastUpdate();
 
@@ -77,12 +76,12 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
         throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
     }
 
-    startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
-    endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
+    var startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
+    var endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
 
-    flotData = [];
-    timestamp = firstUpdated + (startRow - 1) * step;
-    dsIndex = ds.getIdx();
+    var flotData = [];
+    var timestamp = firstUpdated + (startRow - 1) * step;
+    var dsIndex = ds.getIdx();
     for (var i=startRow; i<=endRow; i++) {
         var val = bestRRA.getEl(i, dsIndex);
         flotData.push([timestamp*1000.0, val]);
@@ -94,30 +93,85 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
 
 jrrd.RrdQueryRemote = function(url) {
     this.url = url;
-    this.rrd = null;
+    this.lastUpdate = 0;
+    this._download = null;
 };
 
-jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime) {
+jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     var endTimestamp = endTime.getTime()/1000;
 
-    var d, self = this;
-    if(!this.rrd || this.rrd.getLastUpdate() < endTimestamp) {
-        d = jrrd.downloadBinary(this.url)
+    var self = this;
+
+    // Download the rrd if there has never been a download or if the last
+    // completed download had a lastUpdated timestamp less than the requested
+    // end time.
+    // Don't start another download if one is already in progress.
+    if(!this._download || (this._download.fired > -1 && this.lastUpdate < endTimestamp )) {
+        this._download = jrrd.downloadBinary(this.url)
                 .addCallback(
                     function(binary) {
+                        // Upon successful download convert the resulting binary
+                        // into an RRD file and pass it on to the next callback
+                        // in the chain.
                         var rrd = new RRDFile(binary);
-                        self.rrd = rrd;
+                        self.lastUpdate = rrd.getLastUpdate();
                         return rrd;
                     });
-    } else {
-        d = new MochiKit.Async.Deferred()
-        d.callback(this.rrd);
     }
 
-    d.addCallback(
+    // Set up a deferred which will call getData on the local RrdQuery object
+    // returning a flot compatible data object to the caller.
+    var ret = new MochiKit.Async.Deferred().addCallback(
         function(rrd) {
-            return new jrrd.RrdQuery(rrd).getData(startTime, endTime);
+            return new jrrd.RrdQuery(rrd).getData(startTime, endTime, dsId);
         });
 
-    return d;
+    // Add a pair of callbacks to the current download which will callback the
+    // result which we setup above.
+    this._download.addCallbacks(
+        function(res) {
+            ret.callback(res);
+            return res;
+        },
+        function(err) {
+            ret.errback(err);
+            return err;
+        });
+
+    return ret;
+};
+
+
+jrrd.Chart = function(template, options) {
+    var self = this;
+
+    this.template = template;
+    this.options = options;
+    this.data = [];
+};
+
+jrrd.Chart.prototype.addData = function(label, db) {
+    this.data.push([label, db]);
+};
+
+jrrd.Chart.prototype.draw = function(startTime, endTime) {
+    var self = this;
+
+    var results = [];
+    for(var i=0; i<this.data.length; i++) {
+        results.push(this.data[i][1].getData(startTime, endTime));
+    }
+
+    return MochiKit.Async.gatherResults(results)
+            .addCallback(
+                function(data) {
+                    for(var i=0; i<data.length; i++) {
+                        data[i].label = self.data[i][0];
+                    }
+                    var plot = $.plot(self.template, data, self.options);
+                })
+            .addErrback(
+                function(failure) {
+                    self.template.text('error: ' + failure.message);
+                });
 };
