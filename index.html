@@ -7,6 +7,7 @@
         <script type="text/javascript" src="assets/javascript/jquery-1.4.2.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.min.js"></script>
+        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.stack.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.selection.min.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/binaryXHR.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFile.js"></script>
@@ -23,10 +24,12 @@
                 mode: 'x'
             },
             series: {
+                stack: true,
                 points: { show: false },
                 lines: {
                     show: true,
                     steps: false,
+                    fill: 0.1,
                     shadowSize: 0,
                     lineWidth: 1
                 },
@@ -37,36 +40,66 @@
             }
         };
 
-        function drawChart(db, startTime, endTime) {
-            return db.getData(startTime, endTime)
-                .addCallback(
-                    function(data) {
-                        var plot = $.plot($('.container'), data, graphOptions);
-                    })
-                .addErrback(
-                    function(failure) {
-                        $('.container').text('error: ' + failure.message);
-                    });
-        }
+        var Chart = function(template) {
+            var self = this;
 
-        var db = new jrrd.RrdQueryRemote('data/localhost/load/load.rrd');
+            this.template = template;
+            this.data = [];
 
-        $(function() {
-            drawChart(db, new Date('7 April 2010 09:30:00'),
-                          new Date('7 April 2010 15:00:00'));
-
-            $('.container').bind('plotclick', function(event, pos, item) {
+            this.template.bind('plotclick', function(event, pos, item) {
                 if (item) {
-                    console.log(['X: ' + new Date(item.datapoint[0]), 'Y: ' + item.datapoint[1]]);
+                    console.log(['X: ' + new Date(item.datapoint[0]),
+                                 'Y: ' + item.datapoint[1]]);
                 }
             });
 
-            $('.container').bind("plotselected", function(event, ranges) {
+            this.template.bind("plotselected", function(event, ranges) {
                 var startTime = new Date(ranges.xaxis.from);
                 var endTime = new Date(ranges.xaxis.to);
-                drawChart(db, startTime, endTime);
+                self.draw(startTime, endTime);
                 console.log("You selected " + startTime + " to " + endTime);
             });
+        };
+
+        Chart.prototype.addData = function(label, db) {
+            this.data.push([label, db]);
+        };
+
+        Chart.prototype.draw = function(startTime, endTime) {
+            var self = this;
+
+            var results = [];
+            for(var i=0; i<this.data.length; i++) {
+                results.push(this.data[i][1].getData(startTime, endTime));
+            }
+
+            return MochiKit.Async.gatherResults(results)
+                   .addCallback(
+                    function(data) {
+                        for(var i=0; i<data.length; i++) {
+                            data[i].label = self.data[i][0];
+                        }
+                        var plot = $.plot(self.template, data, graphOptions);
+                    })
+                   .addErrback(
+                    function(failure) {
+                        $('.container').text('error: ' + failure.message);
+                    });
+        };
+
+        $(function() {
+            var c = new Chart($('.container'));
+            //data = 'memory-buffered.rrd memory-cached.rrd memory-free.rrd memory-used.rrd'.split(' ');
+            data = 'cpu-user.rrd  cpu-system.rrd  cpu-wait.rrd'.split('  ').reverse();
+
+            jQuery.each(data, function(i, el) {
+                var url = 'data/localhost/cpu-0/' + el;
+                var label = el.split('.')[0].split('-')[1];
+                c.addData(label, new jrrd.RrdQueryRemote(url));
+            });
+
+            c.draw(new Date('7 April 2010 09:30:00'),
+                   new Date('7 April 2010 15:00:00'));
         });
         </script>
     </head>

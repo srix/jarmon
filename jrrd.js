@@ -43,9 +43,14 @@ jrrd.RrdQuery = function(rrd) {
     this.rrd = rrd;
 };
 
-jrrd.RrdQuery.prototype.getData = function(startTime, endTime) {
+jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
     var startTimestamp = startTime.getTime()/1000;
     var endTimestamp = endTime.getTime()/1000;
+
+    if(dsId == null) {
+        dsId = 0;
+    }
+    var ds = this.rrd.getDS(dsId);
 
     var consolidationFunc = 'AVERAGE';
     var lastUpdated = this.rrd.getLastUpdate();
@@ -74,18 +79,16 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime) {
 
     startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
     endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
-    returnData = [];
-    for(var d=this.rrd.getNrDSs()-1; d>=0; d--) {
-        flotData = [];
-        timestamp = firstUpdated + (startRow - 1) * step;
-        for (var i=startRow; i<=endRow; i++) {
-            var val = bestRRA.getEl(i, d);
-            flotData.push([timestamp*1000.0, val]);
-            timestamp += step;
-        }
-        returnData.push({label: this.rrd.getDS(d).getName(), data: flotData});
+
+    flotData = [];
+    timestamp = firstUpdated + (startRow - 1) * step;
+    dsIndex = ds.getIdx();
+    for (var i=startRow; i<=endRow; i++) {
+        var val = bestRRA.getEl(i, dsIndex);
+        flotData.push([timestamp*1000.0, val]);
+        timestamp += step;
     }
-    return returnData;
+    return {label: ds.getName(), data: flotData};
 };
 
 
