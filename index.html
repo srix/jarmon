@@ -49,55 +49,54 @@
             return d;
         }
 
+
         var RrdQuery = function(rrd) {
             this.rrd = rrd;
         }
 
-        RrdQuery.prototype = {
-            getData: function(startTime, endTime) {
-                var startTimestamp = startTime.getTime()/1000;
-                var endTimestamp = endTime.getTime()/1000;
+        RrdQuery.prototype.getData = function(startTime, endTime) {
+            var startTimestamp = startTime.getTime()/1000;
+            var endTimestamp = endTime.getTime()/1000;
 
-                var consolidationFunc = 'AVERAGE';
-                var lastUpdated = this.rrd.getLastUpdate();
+            var consolidationFunc = 'AVERAGE';
+            var lastUpdated = this.rrd.getLastUpdate();
 
-                var bestRRA = null;
-                for(var i=0; i<this.rrd.getNrRRAs(); i++) {
-                    // Look through all RRAs looking for the most suitable
-                    // data resolution.
-                    var rra = this.rrd.getRRA(i);
+            var bestRRA = null;
+            for(var i=0; i<this.rrd.getNrRRAs(); i++) {
+                // Look through all RRAs looking for the most suitable
+                // data resolution.
+                var rra = this.rrd.getRRA(i);
 
-                    if(rra.getCFName() != consolidationFunc) {
-                        continue;
-                    }
-                    bestRRA = rra;
-                    var step = rra.getStep();
-                    var rraRowCount = rra.getNrRows();
-                    var firstUpdated = lastUpdated - (rraRowCount - 1) * step;
-                    if(firstUpdated <= startTimestamp) {
-                        break;
-                    }
+                if(rra.getCFName() != consolidationFunc) {
+                    continue;
                 }
-
-                if(!bestRRA) {
-                    throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
+                bestRRA = rra;
+                var step = rra.getStep();
+                var rraRowCount = rra.getNrRows();
+                var firstUpdated = lastUpdated - (rraRowCount - 1) * step;
+                if(firstUpdated <= startTimestamp) {
+                    break;
                 }
-
-                startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
-                endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
-                returnData = [];
-                for(var d=this.rrd.getNrDSs()-1; d>=0; d--) {
-                    flotData = [];
-                    timestamp = firstUpdated + (startRow - 1) * step;
-                    for (var i=startRow; i<=endRow; i++) {
-                        var val = bestRRA.getEl(i, d);
-                        flotData.push([timestamp*1000.0, val]);
-                        timestamp += step;
-                    }
-                    returnData.push({label: this.rrd.getDS(d).getName(), data: flotData});
-                }
-                return returnData;
             }
+
+            if(!bestRRA) {
+                throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
+            }
+
+            startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
+            endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
+            returnData = [];
+            for(var d=this.rrd.getNrDSs()-1; d>=0; d--) {
+                flotData = [];
+                timestamp = firstUpdated + (startRow - 1) * step;
+                for (var i=startRow; i<=endRow; i++) {
+                    var val = bestRRA.getEl(i, d);
+                    flotData.push([timestamp*1000.0, val]);
+                    timestamp += step;
+                }
+                returnData.push({label: this.rrd.getDS(d).getName(), data: flotData});
+            }
+            return returnData;
         };
 
 
@@ -106,31 +105,29 @@
             this.rrd = null;
         }
 
-        RrdQueryRemote.prototype = {
-            getData: function(startTime, endTime) {
-                var endTimestamp = endTime.getTime()/1000;
+        RrdQueryRemote.prototype.getData = function(startTime, endTime) {
+            var endTimestamp = endTime.getTime()/1000;
 
-                var d, self = this;
-                if(!this.rrd || this.rrd.getLastUpdate() < endTimestamp) {
-                    d = downloadBinary(this.url)
-                            .addCallback(
-                                function(binary) {
-                                    var rrd = new RRDFile(binary);
-                                    self.rrd = rrd;
-                                    return rrd;
-                                });
-                } else {
-                    d = new MochiKit.Async.Deferred()
-                    d.callback(this.rrd);
-                }
-
-                d.addCallback(
-                    function(rrd) {
-                        return new RrdQuery(rrd).getData(startTime, endTime);
-                    });
-
-                return d;
+            var d, self = this;
+            if(!this.rrd || this.rrd.getLastUpdate() < endTimestamp) {
+                d = downloadBinary(this.url)
+                        .addCallback(
+                            function(binary) {
+                                var rrd = new RRDFile(binary);
+                                self.rrd = rrd;
+                                return rrd;
+                            });
+            } else {
+                d = new MochiKit.Async.Deferred()
+                d.callback(this.rrd);
             }
+
+            d.addCallback(
+                function(rrd) {
+                    return new RrdQuery(rrd).getData(startTime, endTime);
+                });
+
+            return d;
         };
 
         var graphOptions = {
