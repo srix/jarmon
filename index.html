@@ -6,9 +6,9 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
         <script type="text/javascript" src="assets/javascript/jquery-1.4.2.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.min.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.stack.min.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.selection.min.js"></script>
+        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.js"></script>
+        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.stack.js"></script>
+        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.selection.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/binaryXHR.js"></script>
         <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFile.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Base.js"></script>
@@ -29,7 +29,7 @@
                 lines: {
                     show: true,
                     steps: false,
-                    fill: 0.1,
+                    fill: 0.5,
                     shadowSize: 0,
                     lineWidth: 1
                 },
@@ -89,7 +89,7 @@
 
         $(function() {
             var c = new Chart($('.container'));
-            //data = 'memory-buffered.rrd memory-cached.rrd memory-free.rrd memory-used.rrd'.split(' ');
+            //data = 'memory-free.rrd memory-cached.rrd memory-used.rrd memory-buffered.rrd'.split(' ').reverse();
             data = 'cpu-user.rrd  cpu-system.rrd  cpu-wait.rrd'.split('  ').reverse();
 
             jQuery.each(data, function(i, el) {
