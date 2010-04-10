@@ -1,4 +1,9 @@
-function downloadBinary(url) {
+
+if(typeof jrrd == 'undefined') {
+    var jrrd = {};
+}
+
+jrrd.downloadBinary = function(url) {
     var d = new MochiKit.Async.Deferred();
 
     $.ajax({
@@ -31,14 +36,14 @@ function downloadBinary(url) {
         }
     });
     return d;
-}
+};
 
 
-var RrdQuery = function(rrd) {
+jrrd.RrdQuery = function(rrd) {
     this.rrd = rrd;
-}
+};
 
-RrdQuery.prototype.getData = function(startTime, endTime) {
+jrrd.RrdQuery.prototype.getData = function(startTime, endTime) {
     var startTimestamp = startTime.getTime()/1000;
     var endTimestamp = endTime.getTime()/1000;
 
@@ -84,17 +89,17 @@ RrdQuery.prototype.getData = function(startTime, endTime) {
 };
 
 
-var RrdQueryRemote = function(url) {
+jrrd.RrdQueryRemote = function(url) {
     this.url = url;
     this.rrd = null;
-}
+};
 
-RrdQueryRemote.prototype.getData = function(startTime, endTime) {
+jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime) {
     var endTimestamp = endTime.getTime()/1000;
 
     var d, self = this;
     if(!this.rrd || this.rrd.getLastUpdate() < endTimestamp) {
-        d = downloadBinary(this.url)
+        d = jrrd.downloadBinary(this.url)
                 .addCallback(
                     function(binary) {
                         var rrd = new RRDFile(binary);
@@ -108,7 +113,7 @@ RrdQueryRemote.prototype.getData = function(startTime, endTime) {
 
     d.addCallback(
         function(rrd) {
-            return new RrdQuery(rrd).getData(startTime, endTime);
+            return new jrrd.RrdQuery(rrd).getData(startTime, endTime);
         });
 
     return d;

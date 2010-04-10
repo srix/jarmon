@@ -12,7 +12,7 @@
         <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFile.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Base.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Async.js"></script>
-        <script type="text/javascript" src="assets/javascript/jrrd.js"></script>
+        <script type="text/javascript" src="jrrd.js"></script>
         <script type="text/javascript">
 
         var graphOptions = {
@@ -49,7 +49,7 @@
                     });
         }
 
-        var db = new RrdQueryRemote('data/localhost/load/load.rrd');
+        var db = new jrrd.RrdQueryRemote('data/localhost/load/load.rrd');
 
         $(function() {
             drawChart(db, new Date('7 April 2010 09:30:00'),
