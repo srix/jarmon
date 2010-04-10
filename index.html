@@ -4,7 +4,7 @@
     <head>
         <title>untitled</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-        <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
+        <script type="text/javascript" src="assets/javascript/jquery-1.4.2.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.min.js"></script>
         <script type="text/javascript" src="assets/javascript/flot/jquery.flot.selection.min.js"></script>
@@ -13,7 +13,6 @@
         <script type="text/javascript" src="assets/javascript/MochiKit/Base.js"></script>
         <script type="text/javascript" src="assets/javascript/MochiKit/Async.js"></script>
         <script type="text/javascript">
-        var grrd;
 
         function downloadBinary(url) {
             var d = new MochiKit.Async.Deferred();
@@ -50,49 +49,23 @@
             return d;
         }
 
-        var RrdDataWrapper = function(url) {
-            this.url = url;
-            this._rrd = null;
+        var RrdQuery = function(rrd) {
+            this.rrd = rrd;
         }
 
-        RrdDataWrapper.prototype = {
+        RrdQuery.prototype = {
             getData: function(startTime, endTime) {
-                var endTimestamp = endTime.getTime()/1000;
-
-                var d, self = this;
-                if(!this._rrd || this._rrd.getLastUpdate() < endTimestamp) {
-                    d = downloadBinary(this.url)
-                            .addCallback(
-                                function(binary) {
-                                    var rrd = new RRDFile(binary);
-                                    self._rrd = rrd;
-                                    return rrd;
-                                });
-                } else {
-                    d = new MochiKit.Async.Deferred()
-                    d.callback(this._rrd);
-                }
-
-                d.addCallback(
-                    function(rrd) {
-                        return self._getData(startTime, endTime);
-                    });
-
-                return d;
-            },
-
-            _getData: function(startTime, endTime) {
                 var startTimestamp = startTime.getTime()/1000;
                 var endTimestamp = endTime.getTime()/1000;
 
                 var consolidationFunc = 'AVERAGE';
-                var lastUpdated = this._rrd.getLastUpdate();
+                var lastUpdated = this.rrd.getLastUpdate();
 
                 var bestRRA = null;
-                for(var i=0; i<this._rrd.getNrRRAs(); i++) {
+                for(var i=0; i<this.rrd.getNrRRAs(); i++) {
                     // Look through all RRAs looking for the most suitable
                     // data resolution.
-                    var rra = this._rrd.getRRA(i);
+                    var rra = this.rrd.getRRA(i);
 
                     if(rra.getCFName() != consolidationFunc) {
                         continue;
@@ -113,7 +86,7 @@
                 startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step);
                 endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step);
                 returnData = [];
-                for(var d=this._rrd.getNrDSs()-1; d>=0; d--) {
+                for(var d=this.rrd.getNrDSs()-1; d>=0; d--) {
                     flotData = [];
                     timestamp = firstUpdated + (startRow - 1) * step;
                     for (var i=startRow; i<=endRow; i++) {
@@ -121,9 +94,42 @@
                         flotData.push([timestamp*1000.0, val]);
                         timestamp += step;
                     }
-                    returnData.push({label: this._rrd.getDS(d).getName(), data: flotData});
+                    returnData.push({label: this.rrd.getDS(d).getName(), data: flotData});
                 }
                 return returnData;
+            }
+        };
+
+
+        var RrdQueryRemote = function(url) {
+            this.url = url;
+            this.rrd = null;
+        }
+
+        RrdQueryRemote.prototype = {
+            getData: function(startTime, endTime) {
+                var endTimestamp = endTime.getTime()/1000;
+
+                var d, self = this;
+                if(!this.rrd || this.rrd.getLastUpdate() < endTimestamp) {
+                    d = downloadBinary(this.url)
+                            .addCallback(
+                                function(binary) {
+                                    var rrd = new RRDFile(binary);
+                                    self.rrd = rrd;
+                                    return rrd;
+                                });
+                } else {
+                    d = new MochiKit.Async.Deferred()
+                    d.callback(this.rrd);
+                }
+
+                d.addCallback(
+                    function(rrd) {
+                        return new RrdQuery(rrd).getData(startTime, endTime);
+                    });
+
+                return d;
             }
         };
 
@@ -161,7 +167,7 @@
                     });
         }
 
-        var db = new RrdDataWrapper('data/localhost/load/load.rrd');
+        var db = new RrdQueryRemote('data/localhost/load/load.rrd');
 
         $(function() {
             drawChart(db, new Date('7 April 2010 09:30:00'),
