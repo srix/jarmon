@@ -1,3 +1,13 @@
+/* Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+ * See LICENSE for details.
+ *
+ * Wrappers and convenience fuctions for working with the javascriptRRD, jQuery,
+ * and flot charting packages.
+ *
+ * javascriptRRD - http://javascriptrrd.sourceforge.net/
+ * jQuery - http://jquery.com/
+ * flot - http://code.google.com/p/flot/
+ */
 
 if(typeof jrrd == 'undefined') {
     var jrrd = {};
@@ -38,46 +48,71 @@ jrrd.downloadBinary = function(url) {
     return d;
 };
 
-
+/**
+ * A wrapper around an instance of javascriptrrd.RRDFile which provides a
+ * convenient way to query the RRDFile based on time range, RRD data source (DS)
+ * and RRD consolidation function (CF).
+ *
+ * @param startTime: A javascript {Date} instance representing the start of query
+ *                   time range, or {null} to return earliest available data.
+ * @param endTime: A javascript {Date} instance representing the end of query
+ *                   time range, or {null} to return latest available data.
+ * @param dsId: A {String} name of an RRD DS or an {Int} DS index number or
+ *              {null} to return the first available DS.
+ * @param cfName: A {String} name of an RRD consolidation function
+ * @return: A flot compatible data series object
+ **/
 jrrd.RrdQuery = function(rrd) {
     this.rrd = rrd;
 };
 
-jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
+jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
     var startTimestamp = startTime.getTime()/1000;
-    var endTimestamp = endTime.getTime()/1000;
+
+    var lastUpdated = this.rrd.getLastUpdate();
+    var endTimestamp = lastUpdated;
+    if(endTime) {
+        endTimestamp = endTime.getTime()/1000;
+        // If end time stamp is beyond the range of this rrd then reset it
+        if(lastUpdated < endTimestamp) {
+            endTimestamp = lastUpdated;
+        }
+    }
 
     if(dsId == null) {
         dsId = 0;
     }
     var ds = this.rrd.getDS(dsId);
-    var consolidationFunc = 'AVERAGE';
-    var lastUpdated = this.rrd.getLastUpdate();
 
-    // If end time stamp is beyond the range of this rrd then reset it
-    if(lastUpdated < endTimestamp) {
-        endTimestamp = lastUpdated;
+    if(cfName == null) {
+        cfName = 'AVERAGE';
     }
-    var bestRRA = null;
+
+    var rra, step, rraRowCount, firstUpdated;
     for(var i=0; i<this.rrd.getNrRRAs(); i++) {
         // Look through all RRAs looking for the most suitable
         // data resolution.
         var rra = this.rrd.getRRA(i);
 
-        if(rra.getCFName() != consolidationFunc) {
+        // If this rra doesn't use the requested CF then move on to the next.
+        if(rra.getCFName() != cfName) {
             continue;
         }
-        bestRRA = rra;
-        var step = rra.getStep();
-        var rraRowCount = rra.getNrRows();
-        var firstUpdated = lastUpdated - (rraRowCount - 1) * step;
+
+        step = rra.getStep();
+        rraRowCount = rra.getNrRows();
+        firstUpdated = lastUpdated - (rraRowCount - 1) * step;
+        // We assume that the RRAs are listed in ascending order of time range,
+        // therefore the first RRA which contains the range minimum should give
+        // the highest resolution data for this range.
         if(firstUpdated <= startTimestamp) {
             break;
         }
     }
-
-    if(!bestRRA) {
-        throw new Error('Unrecognised consolidation function: ' + consolidationFunc);
+    // If we got to the end of the loop without ever defining step, it means
+    // that the CF check never succeded.
+    if(!step) {
+        throw new Error('Unrecognised consolidation function: ' + cfName);
     }
 
     var startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step) - 1;
@@ -87,10 +122,10 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId) {
     var timestamp = firstUpdated + (startRow - 1) * step;
     var dsIndex = ds.getIdx();
     for (var i=startRow; i<=endRow; i++) {
-        var val = bestRRA.getEl(i, dsIndex);
-        flotData.push([timestamp*1000.0, val]);
+        flotData.push([timestamp*1000.0, rra.getEl(i, dsIndex)]);
         timestamp += step;
     }
+
     return {label: ds.getName(), data: flotData};
 };
 
