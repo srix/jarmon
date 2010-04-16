@@ -218,3 +218,74 @@ jrrd.Chart.prototype.draw = function(startTime, endTime) {
                     self.template.text('error: ' + failure.message);
                 }, this);
 };
+
+jrrd.ChartCoordinator = function(ui) {
+    this.ui = ui;
+    this.charts = [];
+
+    var self = this;
+    this.ui.bind('submit', function(e) {
+        self.update();
+        return false;
+    });
+
+    this.ui.bind('reset', function(e) {
+        self.reset();
+        return false;
+    });
+    var rangePreviewOptions = {
+        selection: {
+            mode: 'x'
+        },
+        xaxis: {
+            mode: "time"
+        },
+        yaxis: {
+            ticks: []
+        }
+    };
+    var now = new Date().getTime();
+    var HOUR = 1000 * 60 * 60;
+    var DAY = HOUR * 24;
+    var WEEK = DAY * 7;
+    var MONTH = DAY * 31;
+    var YEAR = DAY * 365;
+
+    var data = [
+        [now - WEEK, null],
+        [now, null]];
+
+    this.rangePreview = $.plot(this.ui.find('.range-preview'), [data], rangePreviewOptions);
+
+    this.ui.bind("plotselected", function(event, ranges) {
+        self.setTimeRange(new Date(ranges.xaxis.from),
+                          new Date(ranges.xaxis.to));
+    });
+};
+
+jrrd.ChartCoordinator.prototype.update = function() {
+    var startTime = new Date(this.ui[0].startTime.value);
+    var endTime = new Date(this.ui[0].endTime.value);
+    var ranges = {
+        xaxis: {
+            from: startTime.getTime(),
+            to: endTime.getTime()
+        }
+    };
+    this.rangePreview.setSelection(ranges, true);
+    for(var i=0; i<this.charts.length; i++){
+        this.charts[i].draw(startTime, endTime);
+    }
+};
+
+jrrd.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
+    this.ui[0].startTime.value = startTime.toString().split(' ').slice(1,5).join(' ');
+    this.ui[0].endTime.value = endTime.toString().split(' ').slice(1,5).join(' ');
+    this.update();
+};
+
+jrrd.ChartCoordinator.prototype.reset = function() {
+    this.setTimeRange(new Date(new Date().getTime()-1*60*60*1000),
+                      new Date());
+};
+
