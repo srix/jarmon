@@ -191,13 +191,56 @@ jrrd.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
 
 jrrd.Chart = function(template, options) {
     this.template = template;
-    this.options = jQuery.extend(true, {}, options);
+    this.options = jQuery.extend(true, {yaxis: {}}, options);
     this.data = [];
     var self = this;
     $('.legend tr', this.template[0]).live('click', function(e) {
         self.switchDataEnabled($(this).children('.legendLabel').text());
         self.draw();
     });
+
+    this.options['yaxis']['ticks'] = function(axis) {
+        var siPrefixes = {
+            0: '',
+            1: 'K',
+            2: 'M',
+            3: 'G',
+            4: 'T'
+        }
+        var si = 0;
+        while(true) {
+            if( Math.pow(1000, si+1)*0.9 > axis.max ) {
+                break;
+            }
+            si++;
+        }
+
+        var minVal = axis.min/Math.pow(1000, si);
+        var maxVal = axis.max/Math.pow(1000, si);
+
+        var stepSizes = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 5, 10, 25, 50, 100, 250];
+        var realStep = (maxVal - minVal)/5.0;
+
+        var stepSize, decimalPlaces = 0;
+        for(var i=0; i<stepSizes.length; i++) {
+            stepSize = stepSizes[i]
+            if( realStep < stepSize ) {
+                if(stepSize < 10) {
+                    decimalPlaces = 2;
+                }
+                break;
+            }
+        }
+
+        var tickMin = minVal - minVal % stepSize;
+        var tickMax = maxVal - maxVal % stepSize + stepSize
+
+        var ticks = [];
+        for(var j=tickMin; j<=tickMax; j+=stepSize) {
+            ticks.push([j*Math.pow(1000, si), j.toFixed(decimalPlaces) + siPrefixes[si]]);
+        }
+        return ticks;
+    };
 };
 
 jrrd.Chart.prototype.addData = function(label, db, enabled) {
@@ -251,14 +294,16 @@ jrrd.Chart.prototype.draw = function() {
     return MochiKit.Async.gatherResults(results)
             .addCallback(
                 function(self, data) {
-                    var i, disabled = [];
+                    var i, label, disabled = [];
                     for(i=0; i<data.length; i++) {
-                        data[i].label = self.data[i][0];
+                        label = self.data[i][0];
+                        data[i].label = label;
                         if(!self.data[i][2]) {
-                            disabled.push(self.data[i][0]);
+                            disabled.push(label);
                         }
                     }
-                    var plot = $.plot(self.template, data, self.options);
+
+                    $.plot(self.template, data, self.options);
 
                     // Highlight any disabled data sources in the legend
                     self.template.find('.legendLabel').each(
