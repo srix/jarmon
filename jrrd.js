@@ -198,27 +198,6 @@ jrrd.Chart = function(template, options) {
         self.switchDataEnabled($(this).children('.legendLabel').text());
         self.draw();
     });
-
-    this.options['legend'] = {
-        'labelFormatter': function(label, series) {
-            return self.legendLabelFormatter(label, series);
-        }
-    };
-};
-
-jrrd.Chart.prototype.legendLabelFormatter = function(label, series) {
-    for(var i=0; i<this.data.length; i++) {
-        if(this.data[i][0] == label) {
-            if(!this.data[i][2]) {
-                return ['<span style="text-decoration: line-through;">',
-                        label,
-                        '</span>'].join('');
-            } else {
-                return label;
-            }
-        }
-    }
-    return 'unknown: ' + label;
 };
 
 jrrd.Chart.prototype.addData = function(label, db, enabled) {
@@ -272,10 +251,24 @@ jrrd.Chart.prototype.draw = function() {
     return MochiKit.Async.gatherResults(results)
             .addCallback(
                 function(self, data) {
-                    for(var i=0; i<data.length; i++) {
+                    var i, disabled = [];
+                    for(i=0; i<data.length; i++) {
                         data[i].label = self.data[i][0];
+                        if(!self.data[i][2]) {
+                            disabled.push(self.data[i][0]);
+                        }
                     }
                     var plot = $.plot(self.template, data, self.options);
+
+                    // Highlight any disabled data sources in the legend
+                    self.template.find('.legendLabel').each(
+                        function(i, el) {
+                            var labelCell = $(el);
+                            if( $.inArray(labelCell.text(), disabled) > -1 ) {
+                                labelCell.addClass('disabled');
+                            }
+                        }
+                    );
                 }, this)
             .addErrback(
                 function(self, failure) {
