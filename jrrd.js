@@ -62,8 +62,9 @@ jrrd.downloadBinary = function(url) {
  * @param cfName: A {String} name of an RRD consolidation function
  * @return: A flot compatible data series object
  **/
-jrrd.RrdQuery = function(rrd) {
+jrrd.RrdQuery = function(rrd, unit) {
     this.rrd = rrd;
+    this.unit = unit;
 };
 
 jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
@@ -126,12 +127,13 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
         timestamp += step;
     }
 
-    return {label: ds.getName(), data: flotData};
+    return {label: ds.getName(), data: flotData, unit: this.unit};
 };
 
 
-jrrd.RrdQueryRemote = function(url) {
+jrrd.RrdQueryRemote = function(url, unit) {
     this.url = url;
+    this.unit = unit;
     this.lastUpdate = 0;
     this._download = null;
 };
@@ -159,9 +161,9 @@ jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     // Set up a deferred which will call getData on the local RrdQuery object
     // returning a flot compatible data object to the caller.
     var ret = new MochiKit.Async.Deferred().addCallback(
-        function(startTime, endTime, dsId, rrd) {
-            return new jrrd.RrdQuery(rrd).getData(startTime, endTime, dsId);
-        }, startTime, endTime, dsId);
+        function(self, startTime, endTime, dsId, rrd) {
+            return new jrrd.RrdQuery(rrd, self.unit).getData(startTime, endTime, dsId);
+        }, this, startTime, endTime, dsId);
 
     // Add a pair of callbacks to the current download which will callback the
     // result which we setup above.
@@ -182,6 +184,7 @@ jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
 jrrd.RrdQueryDsProxy = function(rrdQuery, dsId) {
     this.rrdQuery = rrdQuery;
     this.dsId = dsId;
+    this.unit = rrdQuery.unit;
 };
 
 jrrd.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
@@ -237,8 +240,11 @@ jrrd.Chart = function(template, options) {
 
         var ticks = [];
         for(var j=tickMin; j<=tickMax; j+=stepSize) {
-            ticks.push([j*Math.pow(1000, si), j.toFixed(decimalPlaces) + siPrefixes[si]]);
+            ticks.push([j*Math.pow(1000, si), j.toFixed(decimalPlaces)]);
         }
+
+        self.siPrefix = siPrefixes[si];
+
         return ticks;
     };
 };
@@ -295,9 +301,14 @@ jrrd.Chart.prototype.draw = function() {
             .addCallback(
                 function(self, data) {
                     var i, label, disabled = [];
+                    unit = '';
                     for(i=0; i<data.length; i++) {
                         label = self.data[i][0];
                         data[i].label = label;
+                        if(typeof data[i].unit != 'undefined') {
+                            // Just use the last unit for now
+                            unit = data[i].unit;
+                        }
                         if(!self.data[i][2]) {
                             disabled.push(label);
                         }
@@ -314,6 +325,14 @@ jrrd.Chart.prototype.draw = function() {
                             }
                         }
                     );
+                    var yaxisUnitLabel = $('<div>').text(self.siPrefix + unit)
+                                                   .css({width: '100px',
+                                                         position: 'absolute',
+                                                         top: '80px',
+                                                         left: '-90px',
+                                                         'text-align': 'right'});
+                    self.template.append(yaxisUnitLabel);
+                    yaxisUnitLabel.position(self.template.position());
                 }, this)
             .addErrback(
                 function(self, failure) {
@@ -338,7 +357,7 @@ jrrd.Chart.fromRecipe = function(template, recipe) {
         label = recipe['data'][i][2];
         unit = recipe['data'][i][3];
         if(typeof dataDict[rrd] == 'undefined') {
-            dataDict[rrd] = new jrrd.RrdQueryRemote(rrd);
+            dataDict[rrd] = new jrrd.RrdQueryRemote(rrd, unit);
         }
         c.addData(label, new jrrd.RrdQueryDsProxy(dataDict[rrd], ds));
     }

@@ -126,10 +126,10 @@
             {
                 title: 'Memory',
                 data: [
-                    ['data/memory/memory-buffered.rrd', 0, 'Buffered', 'Byte'],
-                    ['data/memory/memory-used.rrd', 0, 'Used', 'Byte'],
-                    ['data/memory/memory-cached.rrd', 0, 'Cached', 'Byte'],
-                    ['data/memory/memory-free.rrd', 0, 'Free', 'Byte']
+                    ['data/memory/memory-buffered.rrd', 0, 'Buffered', 'B'],
+                    ['data/memory/memory-used.rrd', 0, 'Used', 'B'],
+                    ['data/memory/memory-cached.rrd', 0, 'Cached', 'B'],
+                    ['data/memory/memory-free.rrd', 0, 'Free', 'B']
                 ],
                 options: jQuery.extend(true, {}, baseOptions, stacked)
             },
@@ -158,8 +158,8 @@
             {
                 title: 'Wlan0 Throughput (B/sec)',
                 data: [
-                    ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'B'],
-                    ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'B']
+                    ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
+                    ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
                 ],
                 options: jQuery.extend(true, {}, baseOptions)
             },
