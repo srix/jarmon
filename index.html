@@ -74,9 +74,8 @@
         <script type="text/javascript">
 
         var baseOptions = {
-
             grid: {
-                clickable: true,
+                clickable: false,
                 borderWidth: 1,
                 borderColor: "#000",
                 color: "#000",
@@ -101,92 +100,79 @@
             }
         };
 
-        var fillOptions = jQuery.extend(true, {
+        var stacked = {
             series: {
                 stack: true,
                 lines: {
                     fill: 0.5
                 }
             }
-        }, baseOptions);
+        };
 
-        function cpuChartFactory(title, template) {
-            template.find('.title').text(title);
-            var c = new jrrd.Chart(template.find('.chart'), fillOptions);
-            data = 'cpu-user.rrd  cpu-system.rrd  cpu-wait.rrd'.split('  ').reverse();
+        var recipes = [
+            {
+                title: 'CPU Usage',
+                data: [
+                    ['data/cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', 'Jiffies'],
+                    ['data/cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', 'Jiffies'],
+                    ['data/cpu-0/cpu-system.rrd', 0, 'CPU-0 System', 'Jiffies'],
+                    ['data/cpu-1/cpu-system.rrd', 0, 'CPU-1 System', 'Jiffies'],
+                    ['data/cpu-0/cpu-user.rrd', 0, 'CPU-0 User', 'Jiffies'],
+                    ['data/cpu-1/cpu-user.rrd', 0, 'CPU-1 User', 'Jiffies']
+                ],
+                options: jQuery.extend(true, {}, baseOptions, stacked)
+            },
 
-            jQuery.each(data, function(i, el) {
-                var label = el.split('.')[0].split('-')[1];
-                c.addData('cpu0-' + label, new jrrd.RrdQueryRemote('data/cpu-0/' + el));
-                c.addData('cpu1-' + label, new jrrd.RrdQueryRemote('data/cpu-1/' + el));
-            });
-            return c;
-        }
+            {
+                title: 'Memory',
+                data: [
+                    ['data/memory/memory-buffered.rrd', 0, 'Buffered', 'Byte'],
+                    ['data/memory/memory-used.rrd', 0, 'Used', 'Byte'],
+                    ['data/memory/memory-cached.rrd', 0, 'Cached', 'Byte'],
+                    ['data/memory/memory-free.rrd', 0, 'Free', 'Byte']
+                ],
+                options: jQuery.extend(true, {}, baseOptions, stacked)
+            },
 
-        function memoryChartFactory(title, template) {
-            template.find('.title').text(title);
-            var c = new jrrd.Chart(template.find('.chart'), fillOptions);
-            data = 'memory-free.rrd memory-cached.rrd memory-used.rrd memory-buffered.rrd'.split(' ').reverse();
+            {
+                title: 'DNS Queries',
+                data: [
+                    ['data/dns/dns_opcode-Query.rrd', 0, 'Opcode Query', 'Q/sec'],
+                    ['data/dns/dns_qtype-A.rrd', 0, 'A Queries', 'Q/sec'],
+                    ['data/dns/dns_qtype-PTR.rrd', 0, 'PTR Queries', 'Q/sec'],
+                    ['data/dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/sec']
+                ],
+                options: jQuery.extend(true, {}, baseOptions)
+            },
 
-            jQuery.each(data, function(i, el) {
-                var url = 'data/memory/' + el;
-                var label = el.split('.')[0].split('-')[1];
-                c.addData(label, new jrrd.RrdQueryRemote(url));
-            });
-            return c;
-        }
+            {
+                title: 'Load Average',
+                data: [
+                    ['data/load/load.rrd', 'shortterm', 'Short Term', ''],
+                    ['data/load/load.rrd', 'midterm', 'Medium Term', ''],
+                    ['data/load/load.rrd', 'longterm', 'Long Term', '']
+                ],
+                options: jQuery.extend(true, {}, baseOptions)
+            },
 
-        function dnsChartFactory(title, template) {
-            template.find('.title').text(title);
-            var c = new jrrd.Chart(template.find('.chart'), baseOptions);
-            data = 'dns_opcode-Query.rrd  dns_qtype-A.rrd  dns_qtype-PTR.rrd  dns_rcode-NOERROR.rrd'.split('  ').reverse();
-
-            jQuery.each(data, function(i, el) {
-                var url = 'data/dns/' + el;
-                var label = el.split('.')[0].split('_')[1];
-                c.addData(label, new jrrd.RrdQueryRemote(url));
-            });
-            return c;
-        }
-
-        function loadChartFactory(title, template) {
-            template.find('.title').text(title);
-            var c = new jrrd.Chart(template.find('.chart'), baseOptions);
-            var data = new jrrd.RrdQueryRemote('data/load/load.rrd');
-            var rrdDSs = ['shortterm', 'midterm', 'longterm'];
-            jQuery.each(rrdDSs, function(i, rrdDS) {
-                c.addData(rrdDS, new jrrd.RrdQueryDsProxy(data, rrdDS));
-            });
-            return c;
-        }
-
-        function nicChartFactory(title, template, nicname) {
-            template.find('.title').text(title);
-            var c = new jrrd.Chart(template.find('.chart'), baseOptions);
-            var data = new jrrd.RrdQueryRemote('data/interface/if_octets-' + nicname + '.rrd');
-            var rrdDSs = ['tx', 'rx'];
-            jQuery.each(rrdDSs, function(i, rrdDS) {
-                c.addData(rrdDS, new jrrd.RrdQueryDsProxy(data, rrdDS));
-            });
-            return c;
-        }
+            {
+                title: 'Wlan0 Throughput (B/sec)',
+                data: [
+                    ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'B'],
+                    ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'B']
+                ],
+                options: jQuery.extend(true, {}, baseOptions)
+            },
+        ];
 
         $(function() {
-            var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
             var chartTemplate = $('.chart-container').remove();
-            cc.charts = [
-                loadChartFactory('Load Average',
-                    chartTemplate.clone().appendTo('.charts')),
 
-                nicChartFactory('Wlan0 Throughput',
-                    chartTemplate.clone().appendTo('.charts'), 'wlan0'),
-
-                cpuChartFactory('CPU',
-                    chartTemplate.clone().appendTo('.charts')),
-
-                memoryChartFactory('Memory',
-                    chartTemplate.clone().appendTo('.charts'))
-            ];
+            var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
+            cc.charts = jQuery.map(recipes, function(recipe, i) {
+                return jrrd.Chart.fromRecipe(
+                    chartTemplate.clone().appendTo('.charts'), recipe);
+            });
 
             $('.charts').bind("plotselected", function(event, ranges) {
                 cc.setTimeRange(new Date(ranges.xaxis.from),

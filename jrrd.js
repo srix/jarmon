@@ -326,6 +326,26 @@ jrrd.Chart.prototype.draw = function() {
                 }, this);
 };
 
+
+jrrd.Chart.fromRecipe = function(template, recipe) {
+    template.find('.title').text(recipe['title']);
+    var c = new jrrd.Chart(template.find('.chart'), recipe['options']);
+    var dataDict = {};
+    var ds, label, rrd, unit;
+    for(var i=0; i<recipe['data'].length; i++) {
+        rrd = recipe['data'][i][0];
+        ds = recipe['data'][i][1];
+        label = recipe['data'][i][2];
+        unit = recipe['data'][i][3];
+        if(typeof dataDict[rrd] == 'undefined') {
+            dataDict[rrd] = new jrrd.RrdQueryRemote(rrd);
+        }
+        c.addData(label, new jrrd.RrdQueryDsProxy(dataDict[rrd], ds));
+    }
+    return c;
+}
+
+
 jrrd.ChartCoordinator = function(ui) {
     this.ui = ui;
     this.charts = [];
