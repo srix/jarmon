@@ -14,10 +14,9 @@
         }
 
         .range-preview {
-            width: 700px;
+            width: 800px;
             height:50px;
             margin: 0 auto 0 auto;
-            left: 50px;
             position: relative;
         }
 
@@ -26,8 +25,12 @@
             height:200px;
             margin: 50px auto 50px auto;
         }
+
+        .chart canvas {
+        }
+
         .tickLabel {
-            width:100px;
+            width:50px;
             overflow:hidden;
         }
         </style>
@@ -44,8 +47,14 @@
         <script type="text/javascript">
 
         var baseOptions = {
+
             grid: {
-                clickable: true
+                clickable: true,
+                borderWidth: 1,
+                borderColor: "#000",
+                color: "#000",
+                backgroundColor: "#fff",
+                tickColor: "#eee"
             },
             selection: {
                 mode: 'x'

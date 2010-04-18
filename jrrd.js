@@ -234,6 +234,9 @@ jrrd.ChartCoordinator = function(ui) {
         return false;
     });
     var rangePreviewOptions = {
+        grid: {
+            borderWidth: 1
+        },
         selection: {
             mode: 'x'
         },
