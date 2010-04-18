@@ -191,18 +191,77 @@ jrrd.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
 
 jrrd.Chart = function(template, options) {
     this.template = template;
-    this.options = options;
+    this.options = jQuery.extend(true, {}, options);
     this.data = [];
+    var self = this;
+    $('.legend tr', this.template[0]).live('click', function(e) {
+        self.switchDataEnabled($(this).children('.legendLabel').text());
+        self.draw();
+    });
+
+    this.options['legend'] = {
+        'labelFormatter': function(label, series) {
+            return self.legendLabelFormatter(label, series);
+        }
+    };
 };
 
-jrrd.Chart.prototype.addData = function(label, db) {
-    this.data.push([label, db]);
+jrrd.Chart.prototype.legendLabelFormatter = function(label, series) {
+    for(var i=0; i<this.data.length; i++) {
+        if(this.data[i][0] == label) {
+            if(!this.data[i][2]) {
+                return ['<span style="text-decoration: line-through;">',
+                        label,
+                        '</span>'].join('');
+            } else {
+                return label;
+            }
+        }
+    }
+    return 'unknown: ' + label;
 };
 
-jrrd.Chart.prototype.draw = function(startTime, endTime) {
+jrrd.Chart.prototype.addData = function(label, db, enabled) {
+    if(typeof enabled == 'undefined') {
+        enabled = true;
+    }
+    this.data.push([label, db, enabled]);
+};
+
+jrrd.Chart.prototype.switchDataEnabled = function(label) {
+    for(var i=0; i<this.data.length; i++) {
+        if(this.data[i][0] == label) {
+            this.data[i][2] = !this.data[i][2];
+        }
+    }
+};
+
+jrrd.Chart.prototype.setTimeRange = function(startTime, endTime) {
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.draw();
+}
+
+jrrd.Chart.prototype.draw = function() {
+    var result;
     var results = [];
     for(var i=0; i<this.data.length; i++) {
-        results.push(this.data[i][1].getData(startTime, endTime));
+        if(this.data[i][2]) {
+            result = this.data[i][1].getData(this.startTime, this.endTime);
+        } else {
+            result = new MochiKit.Async.Deferred();
+            result.callback({
+                data: [
+                    [this.startTime.getTime(), 0],
+                    [this.endTime.getTime(), 0]
+                ],
+                lines: {
+                    lineWidth: 0
+                }
+            });
+        }
+
+        results.push(result);
     }
 
     return MochiKit.Async.gatherResults(results)
@@ -277,7 +336,7 @@ jrrd.ChartCoordinator.prototype.update = function() {
     };
     this.rangePreview.setSelection(ranges, true);
     for(var i=0; i<this.charts.length; i++){
-        this.charts[i].draw(startTime, endTime);
+        this.charts[i].setTimeRange(startTime, endTime);
     }
 };
 
