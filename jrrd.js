@@ -243,12 +243,17 @@ jrrd.Chart.prototype.setTimeRange = function(startTime, endTime) {
 }
 
 jrrd.Chart.prototype.draw = function() {
+    this.template.trigger('chart_loading');
     var result;
     var results = [];
     for(var i=0; i<this.data.length; i++) {
         if(this.data[i][2]) {
             result = this.data[i][1].getData(this.startTime, this.endTime);
         } else {
+            // If the data source has been marked as disabled return a fake
+            // empty dataset
+            // 0 values so that it can contribute to a stacked chart.
+            // 0 linewidth so that it doesn't cause a line in stacked chart
             result = new MochiKit.Async.Deferred();
             result.callback({
                 data: [
@@ -275,6 +280,11 @@ jrrd.Chart.prototype.draw = function() {
             .addErrback(
                 function(self, failure) {
                     self.template.text('error: ' + failure.message);
+                }, this)
+            .addBoth(
+                function(self, res) {
+                    self.template.trigger('chart_loaded');
+                    return res;
                 }, this);
 };
 

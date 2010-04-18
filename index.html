@@ -13,6 +13,18 @@
             text-align: center;
         }
 
+        h2 {
+            width: 750px;
+            padding: 0 0 0 50px;
+            margin: 10px auto 5px auto;
+        }
+
+        .loading {
+            background-repeat: no-repeat;
+            background-position: 0 50%;
+            background-image: url(/assets/icons/loading.gif);
+        }
+
         .range-preview {
             width: 800px;
             height:50px;
@@ -23,7 +35,7 @@
         .chart {
             width:800px;
             height:200px;
-            margin: 50px auto 50px auto;
+            margin: 0 auto 0 auto;
         }
 
         .chart canvas {
@@ -93,8 +105,9 @@
             }
         }, baseOptions);
 
-        function cpuChartFactory(template) {
-            var c = new jrrd.Chart(template, fillOptions);
+        function cpuChartFactory(title, template) {
+            template.find('.title').text(title);
+            var c = new jrrd.Chart(template.find('.chart'), fillOptions);
             data = 'cpu-user.rrd  cpu-system.rrd  cpu-wait.rrd'.split('  ').reverse();
 
             jQuery.each(data, function(i, el) {
@@ -105,8 +118,9 @@
             return c;
         }
 
-        function memoryChartFactory(template) {
-            var c = new jrrd.Chart(template, fillOptions);
+        function memoryChartFactory(title, template) {
+            template.find('.title').text(title);
+            var c = new jrrd.Chart(template.find('.chart'), fillOptions);
             data = 'memory-free.rrd memory-cached.rrd memory-used.rrd memory-buffered.rrd'.split(' ').reverse();
 
             jQuery.each(data, function(i, el) {
@@ -117,8 +131,9 @@
             return c;
         }
 
-        function dnsChartFactory(template) {
-            var c = new jrrd.Chart(template, baseOptions);
+        function dnsChartFactory(title, template) {
+            template.find('.title').text(title);
+            var c = new jrrd.Chart(template.find('.chart'), baseOptions);
             data = 'dns_opcode-Query.rrd  dns_qtype-A.rrd  dns_qtype-PTR.rrd  dns_rcode-NOERROR.rrd'.split('  ').reverse();
 
             jQuery.each(data, function(i, el) {
@@ -129,8 +144,9 @@
             return c;
         }
 
-        function loadChartFactory(template) {
-            var c = new jrrd.Chart(template, baseOptions);
+        function loadChartFactory(title, template) {
+            template.find('.title').text(title);
+            var c = new jrrd.Chart(template.find('.chart'), baseOptions);
             var data = new jrrd.RrdQueryRemote('data/load/load.rrd');
             var rrdDSs = ['shortterm', 'midterm', 'longterm'];
             jQuery.each(rrdDSs, function(i, rrdDS) {
@@ -139,8 +155,9 @@
             return c;
         }
 
-        function nicChartFactory(template, nicname) {
-            var c = new jrrd.Chart(template, baseOptions);
+        function nicChartFactory(title, template, nicname) {
+            template.find('.title').text(title);
+            var c = new jrrd.Chart(template.find('.chart'), baseOptions);
             var data = new jrrd.RrdQueryRemote('data/interface/if_octets-' + nicname + '.rrd');
             var rrdDSs = ['tx', 'rx'];
             jQuery.each(rrdDSs, function(i, rrdDS) {
@@ -151,30 +168,35 @@
 
         $(function() {
             var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
-            var chartTemplate = $('.chart').remove();
+            var chartTemplate = $('.chart-container').remove();
             cc.charts = [
-                //dnsChartFactory(
-                //    chartTemplate.clone().appendTo('.charts')),
-
-                loadChartFactory(
+                loadChartFactory('Load Average',
                     chartTemplate.clone().appendTo('.charts')),
 
-                nicChartFactory(
+                nicChartFactory('Wlan0 Throughput',
                     chartTemplate.clone().appendTo('.charts'), 'wlan0'),
 
-                cpuChartFactory(
+                cpuChartFactory('CPU',
                     chartTemplate.clone().appendTo('.charts')),
 
-                memoryChartFactory(
+                memoryChartFactory('Memory',
                     chartTemplate.clone().appendTo('.charts'))
             ];
-
-            cc.reset();
 
             $('.charts').bind("plotselected", function(event, ranges) {
                 cc.setTimeRange(new Date(ranges.xaxis.from),
                                 new Date(ranges.xaxis.to));
             });
+
+            $('.chart-container').live('chart_loading', function(e) {
+                $(this).find('.title').addClass('loading');
+            });
+
+            $('.chart-container').live('chart_loaded', function(e) {
+                $(this).find('.title').removeClass('loading');
+            });
+
+            cc.reset();
         });
         </script>
     </head>
@@ -190,7 +212,10 @@
             <div class="range-preview"></div>
         </form>
         <div class="charts">
-            <div class="chart"></div>
+            <div class="chart-container">
+                <h2 class="title"></h2>
+                <div class="chart"></div>
+            </div>
         </div>
     </body>
 </html>
