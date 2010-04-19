@@ -215,19 +215,21 @@
             <a href="http://collectd.org/">Collectd</a>.</p>
             <h3>Debian / Ubuntu Quick Start</h3>
             <pre>
-                # Install and configure collectd (enable the rrd plugin)
-                $ aptitude install collectd
+# Install and configure collectd (enable the rrd plugin)
+$ aptitude install collectd
 
-                # Create a project folder
-                $ mkdir -p ~/Projects/jrrd
-                $ cd ~/Projects/jrrd
+# Create a project folder and check out the code
+$ mkdir ~/Projects
+$ cd ~/Projects
+$ bzr branch lp:~richardw/+junk/rrd2flot
+$ cd rrd2flot
 
-                # Link to the collectd rrd folder
-                $ ln -f /var/lib/collectd/rrd/localhost data
+# Link to the collectd rrd folder
+$ ln -s /var/lib/collectd/rrd/localhost data
 
-                # Start a local webserver
-                $ aptitude install twisted
-                $ twistd -n web --port 8080 --path .
+# Start a local webserver
+$ aptitude install twisted
+$ twistd -n web --port 8080 --path .
             </pre>
         </div>
 
