@@ -7,6 +7,8 @@
         <style type="text/css">
         body {
             font-family: sans;
+            width: 800px;
+            margin: 20px auto 0 auto;
         }
 
         form div {
@@ -14,10 +16,10 @@
         }
 
         h2 {
-            width: 750px;
-            padding: 0 0 0 50px;
+            padding: 0 0 0 55px;
             margin: 20px auto 5px auto;
             font-size: 14px;
+            text-align: left;
         }
 
         .loading {
@@ -27,14 +29,12 @@
         }
 
         .range-preview {
-            width: 800px;
             height:50px;
             margin: 0 auto 0 auto;
             position: relative;
         }
 
         .chart {
-            width:800px;
             height:200px;
             margin: 0 auto 0 auto;
         }
@@ -60,19 +60,29 @@
             padding: 0;
             border: none;
         }
+
+        .notice {
+            border: 1px solid Green;
+            background: #FFDDFF;
+            margin-bottom: 20px;
+            padding: 5px;
+        }
         </style>
-        <script type="text/javascript" src="assets/javascript/jquery-1.4.2.min.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/excanvas.min.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.stack.js"></script>
-        <script type="text/javascript" src="assets/javascript/flot/jquery.flot.selection.js"></script>
-        <script type="text/javascript" src="assets/javascript/javascriptrrd/binaryXHR.js"></script>
-        <script type="text/javascript" src="assets/javascript/javascriptrrd/rrdFile.js"></script>
-        <script type="text/javascript" src="assets/javascript/MochiKit/Base.js"></script>
-        <script type="text/javascript" src="assets/javascript/MochiKit/Async.js"></script>
+
+        <script type="text/javascript" src="http://svn.mochikit.com/mochikit/trunk/MochiKit/Base.js"></script>
+        <script type="text/javascript" src="http://svn.mochikit.com/mochikit/trunk/MochiKit/Async.js"></script>
+        <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+        <script type="text/javascript" src="http://flot.googlecode.com/svn/trunk/excanvas.min.js"></script>
+        <script type="text/javascript" src="http://flot.googlecode.com/svn/trunk/jquery.flot.js"></script>
+        <script type="text/javascript" src="http://flot.googlecode.com/svn/trunk/jquery.flot.stack.js"></script>
+        <script type="text/javascript" src="http://flot.googlecode.com/svn/trunk/jquery.flot.selection.js"></script>
+
+        <script type="text/javascript" src="http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/binaryXHR.js?revision=1.5&content-type=text%2Fplain"></script>
+        <script type="text/javascript" src="http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/rrdFile.js?revision=1.8&content-type=text%2Fplain"></script>
+
         <script type="text/javascript" src="jrrd.js"></script>
         <script type="text/javascript">
-
+        // Options common to all the chart on this page
         var baseOptions = {
             grid: {
                 clickable: false,
@@ -100,6 +110,7 @@
             }
         };
 
+        // Extra options to generate a stacked chart
         var stacked = {
             series: {
                 stack: true,
@@ -109,6 +120,7 @@
             }
         };
 
+        // Recipes for the charts on this page
         var recipes = [
             {
                 title: 'CPU Usage',
@@ -156,7 +168,7 @@
             },
 
             {
-                title: 'Wlan0 Throughput (B/sec)',
+                title: 'Wlan0 Throughput',
                 data: [
                     ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
                     ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
@@ -174,11 +186,13 @@
                     chartTemplate.clone().appendTo('.charts'), recipe);
             });
 
+            // Update all charts when a selection is made on one of them
             $('.charts').bind("plotselected", function(event, ranges) {
                 cc.setTimeRange(new Date(ranges.xaxis.from),
                                 new Date(ranges.xaxis.to));
             });
 
+            // Show a loading icon when a chart is being redrawn
             $('.chart-container').live('chart_loading', function(e) {
                 $(this).find('.title').addClass('loading');
             });
@@ -187,12 +201,36 @@
                 $(this).find('.title').removeClass('loading');
             });
 
+            // Initialise all the charts
             cc.reset();
         });
         </script>
     </head>
 
     <body>
+        <div class="notice">
+            <p>To get this demo working, you will need to serve this page from a
+            local webserver and serve the folder that contains your RRD files.</p>
+            <p>This demo is designed to work with the RRD files generated by
+            <a href="http://collectd.org/">Collectd</a>.</p>
+            <h3>Debian / Ubuntu Quick Start</h3>
+            <pre>
+                # Install and configure collectd (enable the rrd plugin)
+                $ aptitude install collectd
+
+                # Create a project folder
+                $ mkdir -p ~/Projects/jrrd
+                $ cd ~/Projects/jrrd
+
+                # Link to the collectd rrd folder
+                $ ln -f /var/lib/collectd/rrd/localhost data
+
+                # Start a local webserver
+                $ aptitude install twisted
+                $ twistd -n web --port 8080 --path .
+            </pre>
+        </div>
+
         <form method="GET" class="chartRangeControl">
             <div>
                 <label>Start: <input type="text" name="startTime" /></label>
