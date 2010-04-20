@@ -257,8 +257,8 @@ jrrd.Chart = function(template, options) {
 
     // Listen for clicks on the legend items - onclick enable / disable the
     // corresponding data source.
-    $('.legend tr', this.template[0]).live('click', function(e) {
-        self.switchDataEnabled($(this).children('.legendLabel').text());
+    $('.legend .legendLabel', this.template[0]).live('click', function(e) {
+        self.switchDataEnabled($(this).text());
         self.draw();
     });
 
@@ -402,7 +402,9 @@ jrrd.Chart.prototype.draw = function() {
                     unit = '';
                     for(i=0; i<data.length; i++) {
                         label = self.data[i][0];
-                        data[i].label = label;
+                        if(label) {
+                            data[i].label = label;
+                        }
                         if(typeof data[i].unit != 'undefined') {
                             // Just use the last unit for now
                             unit = data[i].unit;
