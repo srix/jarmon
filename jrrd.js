@@ -502,7 +502,7 @@ jrrd.ChartCoordinator = function(ui) {
     });
 
     // Style and configuration of the range timeline
-    var rangePreviewOptions = {
+    this.rangePreviewOptions = {
         grid: {
             borderWidth: 1
         },
@@ -516,20 +516,6 @@ jrrd.ChartCoordinator = function(ui) {
             ticks: []
         }
     };
-    var now = new Date().getTime();
-    var HOUR = 1000 * 60 * 60;
-    var DAY = HOUR * 24;
-    var WEEK = DAY * 7;
-    var MONTH = DAY * 31;
-    var YEAR = DAY * 365;
-
-    // Dummy data for the range timeline
-    var data = [
-        [now - WEEK, null],
-        [now, null]];
-
-    this.rangePreview = $.plot(this.ui.find('.range-preview'), [data],
-                               rangePreviewOptions);
 
     // When a selection is made on the range timeline, redraw all the charts.
     this.ui.bind("plotselected", function(event, ranges) {
@@ -551,6 +537,35 @@ jrrd.ChartCoordinator.prototype.update = function() {
             to: endTime.getTime()
         }
     };
+
+    // Add a suitable extended head and tail to preview graph time axis
+    var HOUR = 1000 * 60 * 60;
+    var DAY = HOUR * 24;
+    var WEEK = DAY * 7;
+    var MONTH = DAY * 31;
+    var YEAR = DAY * 365;
+    var periods = [HOUR, HOUR*6, HOUR*12,
+                   DAY, DAY*3,
+                   WEEK, WEEK*2,
+                   MONTH, MONTH*3, MONTH*6, YEAR];
+
+    var range = ranges.xaxis.to - ranges.xaxis.from;
+    for(var i=0; i<periods.length; i++) {
+        console.log('Period[' + i + ']');
+        if(range <= periods[i]) {
+            console.log('Period[' + i + ']');
+            break;
+        }
+    }
+
+    // Dummy data for the range timeline
+    var data = [
+        [ranges.xaxis.from - periods[i], null],
+        [ranges.xaxis.to + periods[i], null]];
+
+    this.rangePreview = $.plot(this.ui.find('.range-preview'), [data],
+                               this.rangePreviewOptions);
+
     this.rangePreview.setSelection(ranges, true);
     for(var i=0; i<this.charts.length; i++){
         this.charts[i].setTimeRange(startTime, endTime);
