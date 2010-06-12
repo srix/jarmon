@@ -4,6 +4,8 @@
     <head>
         <title>RRD Charts</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+
+        <link rel="stylesheet" type="text/css" href="http://flowplayer.org/tools/demos/dateinput/css/skin1.css" />
         <style type="text/css">
         body {
             font-family: sans;
@@ -67,6 +69,10 @@
             margin-bottom: 20px;
             padding: 5px;
         }
+
+        #calroot {
+            z-index: 2;
+        }
         </style>
 
         <script type="text/javascript" src="http://svn.mochikit.com/mochikit/trunk/MochiKit/Base.js"></script>
@@ -79,6 +85,8 @@
 
         <script type="text/javascript" src="http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/binaryXHR.js?revision=1.5&content-type=text%2Fplain"></script>
         <script type="text/javascript" src="http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/rrdFile.js?revision=1.8&content-type=text%2Fplain"></script>
+
+        <script type="text/javascript" src="http://cdn.jquerytools.org/1.2.2/all/jquery.tools.min.js"></script>
 
         <script type="text/javascript" src="jrrd.js"></script>
         <script type="text/javascript">
@@ -192,6 +200,14 @@
         ];
 
         $(function() {
+            $(":date").dateinput({format: 'mmm dd yyyy', max: new Date()});
+            // when first date input is changed
+            $(":date[name=startTime]").data("dateinput").change(function() {
+                $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
+            });
+            $(":date[name=endTime]").data("dateinput").change(function() {
+                $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
+            });
             var chartTemplate = $('.chart-container').remove();
 
             var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
@@ -229,8 +245,8 @@
 
         <form method="GET" class="chartRangeControl">
             <div>
-                <label>Start: <input type="text" name="startTime" /></label>
-                <label>End: <input type="text" name="endTime" /></label>
+                <label>Start: <input type="date" name="startTime" /></label>
+                <label>End: <input type="date" name="endTime" /></label>
                 <input type="submit" value="Update" />
                 <input type="reset" value="Reset" />
             </div>
