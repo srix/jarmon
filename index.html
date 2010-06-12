@@ -200,7 +200,7 @@
         ];
 
         $(function() {
-            $(":date").dateinput({format: 'mmm dd yyyy', max: new Date()});
+            $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
             // when first date input is changed
             $(":date[name=startTime]").data("dateinput").change(function() {
                 $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
