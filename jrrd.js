@@ -116,10 +116,11 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
     }
 
     var rra, step, rraRowCount, firstUpdated;
+
     for(var i=0; i<this.rrd.getNrRRAs(); i++) {
         // Look through all RRAs looking for the most suitable
         // data resolution.
-        var rra = this.rrd.getRRA(i);
+        rra = this.rrd.getRRA(i);
 
         // If this rra doesn't use the requested CF then move on to the next.
         if(rra.getCFName() != cfName) {
@@ -142,7 +143,7 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
         throw new Error('Unrecognised consolidation function: ' + cfName);
     }
 
-    var startRow = rraRowCount - parseInt((lastUpdated - startTimestamp)/step) - 1;
+    var startRow = rraRowCount - parseInt((lastUpdated - Math.max(startTimestamp, firstUpdated))/step) - 1;
     var endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step) - 1;
 
     var flotData = [];
@@ -153,7 +154,14 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
         timestamp += step;
     }
 
-    return {label: ds.getName(), data: flotData, unit: this.unit};
+    // Now get the date of the earliest record in entire rrd file, ie that of
+    // the last (longest range) rra.
+    rra = this.rrd.getRRA(this.rrd.getNrRRAs()-1);
+    firstUpdated = lastUpdated - (rra.getNrRows() -1) * rra.getStep();
+
+    return {'label': ds.getName(), 'data': flotData, 'unit': this.unit,
+            'firstUpdated': firstUpdated*1000.0,
+            'lastUpdated': lastUpdated*1000.0};
 };
 
 /**
@@ -253,7 +261,9 @@ jrrd.Chart = function(template, options) {
     this.template = template;
     this.options = jQuery.extend(true, {yaxis: {}}, options);
     this.data = [];
+
     var self = this;
+
 
     // Listen for clicks on the legend items - onclick enable / disable the
     // corresponding data source.
@@ -357,7 +367,7 @@ jrrd.Chart.prototype.setTimeRange = function(startTime, endTime) {
      **/
     this.startTime = startTime;
     this.endTime = endTime;
-    this.draw();
+    return this.draw();
 }
 
 jrrd.Chart.prototype.draw = function() {
@@ -531,45 +541,63 @@ jrrd.ChartCoordinator.prototype.update = function() {
      **/
     var startTime = new Date(this.ui[0].startTime.value);
     var endTime = new Date(this.ui[0].endTime.value);
-    var ranges = {
-        xaxis: {
-            from: startTime.getTime(),
-            to: endTime.getTime()
-        }
-    };
-
-    // Add a suitable extended head and tail to preview graph time axis
-    var HOUR = 1000 * 60 * 60;
-    var DAY = HOUR * 24;
-    var WEEK = DAY * 7;
-    var MONTH = DAY * 31;
-    var YEAR = DAY * 365;
-    var periods = [HOUR, HOUR*6, HOUR*12,
-                   DAY, DAY*3,
-                   WEEK, WEEK*2,
-                   MONTH, MONTH*3, MONTH*6, YEAR];
-
-    var range = ranges.xaxis.to - ranges.xaxis.from;
-    for(var i=0; i<periods.length; i++) {
-        console.log('Period[' + i + ']');
-        if(range <= periods[i]) {
-            console.log('Period[' + i + ']');
-            break;
-        }
-    }
-
-    // Dummy data for the range timeline
-    var data = [
-        [ranges.xaxis.from - periods[i], null],
-        [ranges.xaxis.to + periods[i], null]];
-
-    this.rangePreview = $.plot(this.ui.find('.range-preview'), [data],
-                               this.rangePreviewOptions);
-
-    this.rangePreview.setSelection(ranges, true);
+    var chartsLoading = [];
     for(var i=0; i<this.charts.length; i++){
-        this.charts[i].setTimeRange(startTime, endTime);
+        chartsLoading.push(
+            this.charts[i].setTimeRange(startTime, endTime));
     }
+    MochiKit.Async.gatherResults(chartsLoading).addCallback(
+        function(self, startTime, endTime, chartData) {
+            var firstUpdate = new Date().getTime();
+            var lastUpdate = 0;
+
+            for(var i=0; i<chartData.length; i++) {
+                for(var j=0; j<chartData[i].length; j++) {
+                    if(chartData[i][j].firstUpdated < firstUpdate) {
+                        firstUpdate = chartData[i][j].firstUpdated;
+                    }
+                    if(chartData[i][j].lastUpdated > lastUpdate) {
+                        lastUpdate = chartData[i][j].lastUpdated;
+                    }
+                }
+            }
+
+            var ranges = {
+                xaxis: {
+                    from: Math.max(startTime.getTime(), firstUpdate),
+                    to: Math.min(endTime.getTime(), lastUpdate)
+                }
+            };
+
+            // Add a suitable extended head and tail to preview graph time axis
+            var HOUR = 1000 * 60 * 60;
+            var DAY = HOUR * 24;
+            var WEEK = DAY * 7;
+            var MONTH = DAY * 31;
+            var YEAR = DAY * 365;
+            var periods = [HOUR, HOUR*6, HOUR*12,
+                           DAY, DAY*3,
+                           WEEK, WEEK*2,
+                           MONTH, MONTH*3, MONTH*6, YEAR];
+
+            var range = ranges.xaxis.to - ranges.xaxis.from;
+            for(var i=0; i<periods.length; i++) {
+                if(range <= periods[i]) {
+                    i++;
+                    break;
+                }
+            }
+
+            // Dummy data for the range timeline
+            var data = [
+                [Math.max(ranges.xaxis.from - periods[i-1], firstUpdate), 1],
+                [Math.min(ranges.xaxis.to + periods[i-1], lastUpdate), 1]];
+
+            self.rangePreview = $.plot(self.ui.find('.range-preview'), [data],
+                                       self.rangePreviewOptions);
+
+            self.rangePreview.setSelection(ranges, true);
+        }, this, startTime, endTime);
 };
 
 jrrd.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
