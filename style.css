@@ -1,0 +1,66 @@
+body {
+    font-family: sans;
+    width: 800px;
+    margin: 20px auto 0 auto;
+}
+
+form div {
+    text-align: center;
+}
+
+h2 {
+    padding: 0 0 0 55px;
+    margin: 20px auto 5px auto;
+    font-size: 14px;
+    text-align: left;
+}
+
+.loading {
+    background-repeat: no-repeat;
+    background-position: 0 50%;
+    background-image: url(/assets/icons/loading.gif);
+}
+
+.range-preview {
+    height:50px;
+    margin: 0 auto 0 auto;
+    position: relative;
+}
+
+.chart {
+    height:200px;
+    margin: 0 auto 0 auto;
+}
+
+.chart canvas {
+}
+
+.tickLabel {
+    width:50px;
+    overflow:hidden;
+}
+
+.legendLabel {
+    cursor: pointer;
+}
+
+.legend .disabled {
+    text-decoration: line-through;
+}
+
+input[type=checkbox] {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.notice {
+    border: 1px solid Green;
+    background: #FFDDFF;
+    margin-bottom: 20px;
+    padding: 5px;
+}
+
+#calroot {
+    z-index: 2;
+}
