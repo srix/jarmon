@@ -128,7 +128,12 @@
 
             // Download a list of available rrd files and use it to generate
             // any viable chart recipes
-            $.getJSON('rrd_finder.rpy', initialiseCharts);
+
+            // Dynamically generated list of rrd urls
+            //$.getJSON('rrd_finder.rpy', initialiseCharts);
+
+            // A static json file containing a list of rrd urls
+            $.getJSON('rrd_list.json', initialiseCharts);
         });
         </script>
     </head>
