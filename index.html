@@ -134,15 +134,34 @@
 
         // Recipes for the charts on this page
         var recipes = [
+
+            {
+                title: 'Twisted Web TCP Stats',
+                data: [
+                    ['tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
+                    ['tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
+                    ['tcpconns-8080-local/tcp_connections-TIME_WAIT.rrd', 0, 'TIME_WAIT', ''],
+                    ['tcpconns-8080-local/tcp_connections-CLOSED.rrd', 0, 'CLOSED', ''],
+                    ['tcpconns-8080-local/tcp_connections-FIN_WAIT2.rrd', 0, 'FIN_WAIT2', ''],
+                    ['tcpconns-8080-local/tcp_connections-FIN_WAIT1.rrd', 0, 'FIN_WAIT1', ''],
+                    ['tcpconns-8080-local/tcp_connections-ESTABLISHED.rrd', 0, 'ESTABLISHED', ''],
+                    ['tcpconns-8080-local/tcp_connections-LAST_ACK.rrd', 0, 'LAST_ACK', ''],
+                    ['tcpconns-8080-local/tcp_connections-LISTEN.rrd', 0, 'LISTEN', ''],
+                    ['tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
+                    ['tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
+                ],
+                options: jQuery.extend(true, {}, baseOptions, stacked)
+            },
+
             {
                 title: 'CPU Usage',
                 data: [
-                    ['data/cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', 'Jiffies'],
-                    ['data/cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', 'Jiffies'],
-                    ['data/cpu-0/cpu-system.rrd', 0, 'CPU-0 System', 'Jiffies'],
-                    ['data/cpu-1/cpu-system.rrd', 0, 'CPU-1 System', 'Jiffies'],
-                    ['data/cpu-0/cpu-user.rrd', 0, 'CPU-0 User', 'Jiffies'],
-                    ['data/cpu-1/cpu-user.rrd', 0, 'CPU-1 User', 'Jiffies']
+                    ['cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', 'Jiffies'],
+                    ['cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', 'Jiffies'],
+                    ['cpu-0/cpu-system.rrd', 0, 'CPU-0 System', 'Jiffies'],
+                    ['cpu-1/cpu-system.rrd', 0, 'CPU-1 System', 'Jiffies'],
+                    ['cpu-0/cpu-user.rrd', 0, 'CPU-0 User', 'Jiffies'],
+                    ['cpu-1/cpu-user.rrd', 0, 'CPU-1 User', 'Jiffies']
                 ],
                 options: jQuery.extend(true, {}, baseOptions, stacked)
             },
@@ -150,10 +169,10 @@
             {
                 title: 'Memory',
                 data: [
-                    ['data/memory/memory-buffered.rrd', 0, 'Buffered', 'B'],
-                    ['data/memory/memory-used.rrd', 0, 'Used', 'B'],
-                    ['data/memory/memory-cached.rrd', 0, 'Cached', 'B'],
-                    ['data/memory/memory-free.rrd', 0, 'Free', 'B']
+                    ['memory/memory-buffered.rrd', 0, 'Buffered', 'B'],
+                    ['memory/memory-used.rrd', 0, 'Used', 'B'],
+                    ['memory/memory-cached.rrd', 0, 'Cached', 'B'],
+                    ['memory/memory-free.rrd', 0, 'Free', 'B']
                 ],
                 options: jQuery.extend(true, {}, baseOptions, stacked)
             },
@@ -161,10 +180,10 @@
             {
                 title: 'DNS Query Types',
                 data: [
-                    ['data/dns/dns_qtype-A.rrd', 0, 'A', 'Q/sec'],
-                    ['data/dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/sec'],
-                    ['data/dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/sec'],
-                    ['data/dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/sec']
+                    ['dns/dns_qtype-A.rrd', 0, 'A', 'Q/sec'],
+                    ['dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/sec'],
+                    ['dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/sec'],
+                    ['dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/sec']
                 ],
                 options: jQuery.extend(true, {}, baseOptions)
             },
@@ -172,9 +191,9 @@
             {
                 title: 'DNS Return Codes',
                 data: [
-                    ['data/dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/sec'],
-                    ['data/dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/sec'],
-                    ['data/dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/sec']
+                    ['dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/sec'],
+                    ['dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/sec'],
+                    ['dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/sec']
                 ],
                 options: jQuery.extend(true, {}, baseOptions)
             },
@@ -182,9 +201,9 @@
             {
                 title: 'Load Average',
                 data: [
-                    ['data/load/load.rrd', 'shortterm', 'Short Term', ''],
-                    ['data/load/load.rrd', 'midterm', 'Medium Term', ''],
-                    ['data/load/load.rrd', 'longterm', 'Long Term', '']
+                    ['load/load.rrd', 'shortterm', 'Short Term', ''],
+                    ['load/load.rrd', 'midterm', 'Medium Term', ''],
+                    ['load/load.rrd', 'longterm', 'Long Term', '']
                 ],
                 options: jQuery.extend(true, {}, baseOptions)
             },
@@ -192,29 +211,37 @@
             {
                 title: 'Wlan0 Throughput',
                 data: [
-                    ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
-                    ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
+                    ['interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
+                    ['interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
                 ],
                 options: jQuery.extend(true, {}, baseOptions)
-            },
+            }
         ];
 
-        $(function() {
+        function initialiseCharts(rrdUrlList) {
+            /**
+             * Setup chart date range controls and all charts
+             **/
+
+            // Add dhtml calendars to the date input fields
             $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
-            // when first date input is changed
             $(":date[name=startTime]").data("dateinput").change(function() {
                 $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
             });
             $(":date[name=endTime]").data("dateinput").change(function() {
                 $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
             });
+
+            // Extract the chart template from the page
             var chartTemplate = $('.chart-container').remove();
 
             var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
-            cc.charts = jQuery.map(recipes, function(recipe, i) {
-                return jrrd.Chart.fromRecipe(
-                    chartTemplate.clone().appendTo('.charts'), recipe);
-            });
+            cc.charts = jrrd.collectdChartFactory(
+                rrdUrlList, recipes, function() {
+                    // The chart template must be appended to the page early, so
+                    // that flot can calculate chart dimensions etc.
+                    return chartTemplate.clone().appendTo('.charts');
+                });
 
             // Update all charts when a selection is made on one of them
             $('.charts').bind("plotselected", function(event, ranges) {
@@ -233,6 +260,12 @@
 
             // Initialise all the charts
             cc.reset();
+        }
+
+        $(function() {
+            // Download a list of available rrd files and use it to generate
+            // any viable chart recipes
+            $.getJSON('rrd_finder.rpy', initialiseCharts);
         });
         </script>
     </head>
