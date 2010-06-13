@@ -23,51 +23,8 @@
 
         <script type="text/javascript" src="jrrd.js"></script>
         <script type="text/javascript">
-        // Options common to all the chart on this page
-        var baseOptions = {
-            grid: {
-                clickable: false,
-                borderWidth: 1,
-                borderColor: "#000",
-                color: "#000",
-                backgroundColor: "#fff",
-                tickColor: "#eee"
-            },
-            legend: {
-                position: 'nw',
-                noColumns: 2
-            },
-            selection: {
-                mode: 'x'
-            },
-            series: {
-                points: { show: false },
-                lines: {
-                    show: true,
-                    steps: false,
-                    shadowSize: 0,
-                    lineWidth: 1
-                },
-                shadowSize: 0
-            },
-            xaxis: {
-                mode: "time"
-            }
-        };
-
-        // Extra options to generate a stacked chart
-        var stacked = {
-            series: {
-                stack: true,
-                lines: {
-                    fill: 0.5
-                }
-            }
-        };
-
         // Recipes for the charts on this page
         var recipes = [
-
             {
                 title: 'Twisted Web TCP Stats',
                 data: [
@@ -83,79 +40,16 @@
                     ['tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
                     ['tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
                 ],
-                options: jQuery.extend(true, {}, baseOptions, stacked)
+                options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS, jrrd.Chart.STACKED_OPTIONS)
             },
+        ].concat(jrrd.COLLECTD_RECIPES.cpu,jrrd.COLLECTD_RECIPES.memory,jrrd.COLLECTD_RECIPES.load);
 
-            {
-                title: 'CPU Usage',
-                data: [
-                    ['cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', 'Jiffies'],
-                    ['cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', 'Jiffies'],
-                    ['cpu-0/cpu-system.rrd', 0, 'CPU-0 System', 'Jiffies'],
-                    ['cpu-1/cpu-system.rrd', 0, 'CPU-1 System', 'Jiffies'],
-                    ['cpu-0/cpu-user.rrd', 0, 'CPU-0 User', 'Jiffies'],
-                    ['cpu-1/cpu-user.rrd', 0, 'CPU-1 User', 'Jiffies']
-                ],
-                options: jQuery.extend(true, {}, baseOptions, stacked)
-            },
-
-            {
-                title: 'Memory',
-                data: [
-                    ['memory/memory-buffered.rrd', 0, 'Buffered', 'B'],
-                    ['memory/memory-used.rrd', 0, 'Used', 'B'],
-                    ['memory/memory-cached.rrd', 0, 'Cached', 'B'],
-                    ['memory/memory-free.rrd', 0, 'Free', 'B']
-                ],
-                options: jQuery.extend(true, {}, baseOptions, stacked)
-            },
-
-            {
-                title: 'DNS Query Types',
-                data: [
-                    ['dns/dns_qtype-A.rrd', 0, 'A', 'Q/sec'],
-                    ['dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/sec'],
-                    ['dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/sec'],
-                    ['dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/sec']
-                ],
-                options: jQuery.extend(true, {}, baseOptions)
-            },
-
-            {
-                title: 'DNS Return Codes',
-                data: [
-                    ['dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/sec'],
-                    ['dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/sec'],
-                    ['dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/sec']
-                ],
-                options: jQuery.extend(true, {}, baseOptions)
-            },
-
-            {
-                title: 'Load Average',
-                data: [
-                    ['load/load.rrd', 'shortterm', 'Short Term', ''],
-                    ['load/load.rrd', 'midterm', 'Medium Term', ''],
-                    ['load/load.rrd', 'longterm', 'Long Term', '']
-                ],
-                options: jQuery.extend(true, {}, baseOptions)
-            },
-
-            {
-                title: 'Wlan0 Throughput',
-                data: [
-                    ['interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
-                    ['interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
-                ],
-                options: jQuery.extend(true, {}, baseOptions)
-            }
-        ];
 
         function initialiseCharts(rrdUrlList) {
             /**
              * Setup chart date range controls and all charts
              **/
-
+            console.log(jrrd.COLLECTD_RECIPES.cpu);
             // Add dhtml calendars to the date input fields
             $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
             $(":date[name=startTime]").data("dateinput").change(function() {

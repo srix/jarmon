@@ -457,6 +457,126 @@ jrrd.Chart.prototype.draw = function() {
 };
 
 
+// Options common to all the chart on this page
+jrrd.Chart.BASE_OPTIONS = {
+    grid: {
+        clickable: false,
+        borderWidth: 1,
+        borderColor: "#000",
+        color: "#000",
+        backgroundColor: "#fff",
+        tickColor: "#eee"
+    },
+    legend: {
+        position: 'nw',
+        noColumns: 2
+    },
+    selection: {
+        mode: 'x'
+    },
+    series: {
+        points: { show: false },
+        lines: {
+            show: true,
+            steps: false,
+            shadowSize: 0,
+            lineWidth: 1
+        },
+        shadowSize: 0
+    },
+    xaxis: {
+        mode: "time"
+    }
+};
+
+// Extra options to generate a stacked chart
+jrrd.Chart.STACKED_OPTIONS = {
+    series: {
+        stack: true,
+        lines: {
+            fill: 0.5
+        }
+    }
+};
+
+jrrd.COLLECTD_RECIPES = {
+    'cpu': [
+        {
+            title: 'CPU Usage',
+            data: [
+                ['cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', 'Jiffies'],
+                ['cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', 'Jiffies'],
+                ['cpu-0/cpu-system.rrd', 0, 'CPU-0 System', 'Jiffies'],
+                ['cpu-1/cpu-system.rrd', 0, 'CPU-1 System', 'Jiffies'],
+                ['cpu-0/cpu-user.rrd', 0, 'CPU-0 User', 'Jiffies'],
+                ['cpu-1/cpu-user.rrd', 0, 'CPU-1 User', 'Jiffies']
+            ],
+            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS,
+                                             jrrd.Chart.STACKED_OPTIONS)
+        },
+    ],
+
+    'memory': [
+        {
+            title: 'Memory',
+            data: [
+                ['memory/memory-buffered.rrd', 0, 'Buffered', 'B'],
+                ['memory/memory-used.rrd', 0, 'Used', 'B'],
+                ['memory/memory-cached.rrd', 0, 'Cached', 'B'],
+                ['memory/memory-free.rrd', 0, 'Free', 'B']
+            ],
+            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS,
+                                             jrrd.Chart.STACKED_OPTIONS)
+        }
+    ],
+
+    'dns': [
+        {
+            title: 'DNS Query Types',
+            data: [
+                ['dns/dns_qtype-A.rrd', 0, 'A', 'Q/sec'],
+                ['dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/sec'],
+                ['dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/sec'],
+                ['dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/sec']
+            ],
+            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+        },
+
+        {
+            title: 'DNS Return Codes',
+            data: [
+                ['dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/sec'],
+                ['dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/sec'],
+                ['dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/sec']
+            ],
+            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+        }
+    ],
+
+    'load': [
+        {
+            title: 'Load Average',
+            data: [
+                ['load/load.rrd', 'shortterm', 'Short Term', ''],
+                ['load/load.rrd', 'midterm', 'Medium Term', ''],
+                ['load/load.rrd', 'longterm', 'Long Term', '']
+            ],
+            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+        }
+    ],
+
+    'interface': [
+        {
+            title: 'Wlan0 Throughput',
+            data: [
+                ['interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
+                ['interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
+            ],
+            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+        }
+    ]
+};
+
 jrrd.collectdChartFactory = function(rrdUrlList, recipes, templateFactory) {
     /**
      * A factory function to generate a list of I{Chart} from a list of recipes
