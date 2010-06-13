@@ -1,7 +1,7 @@
 body {
     font-family: sans;
-    width: 800px;
-    margin: 20px auto 0 auto;
+    width: 960px;
+    margin: 20px auto 10px auto;
 }
 
 form div {
@@ -23,12 +23,13 @@ h2 {
 
 .range-preview {
     height:50px;
-    margin: 0 auto 0 auto;
+    margin: 0 auto 10px auto;
     position: relative;
 }
 
 .chart {
     height:200px;
+    width: 850px;
     margin: 0 auto 0 auto;
 }
 

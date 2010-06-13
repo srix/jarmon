@@ -504,12 +504,12 @@ jrrd.COLLECTD_RECIPES = {
         {
             title: 'CPU Usage',
             data: [
-                ['cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', 'Jiffies'],
-                ['cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', 'Jiffies'],
-                ['cpu-0/cpu-system.rrd', 0, 'CPU-0 System', 'Jiffies'],
-                ['cpu-1/cpu-system.rrd', 0, 'CPU-1 System', 'Jiffies'],
-                ['cpu-0/cpu-user.rrd', 0, 'CPU-0 User', 'Jiffies'],
-                ['cpu-1/cpu-user.rrd', 0, 'CPU-1 User', 'Jiffies']
+                ['cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', '%'],
+                ['cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', '%'],
+                ['cpu-0/cpu-system.rrd', 0, 'CPU-0 System', '%'],
+                ['cpu-1/cpu-system.rrd', 0, 'CPU-1 System', '%'],
+                ['cpu-0/cpu-user.rrd', 0, 'CPU-0 User', '%'],
+                ['cpu-1/cpu-user.rrd', 0, 'CPU-1 User', '%']
             ],
             options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS,
                                              jrrd.Chart.STACKED_OPTIONS)
@@ -534,10 +534,10 @@ jrrd.COLLECTD_RECIPES = {
         {
             title: 'DNS Query Types',
             data: [
-                ['dns/dns_qtype-A.rrd', 0, 'A', 'Q/sec'],
-                ['dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/sec'],
-                ['dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/sec'],
-                ['dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/sec']
+                ['dns/dns_qtype-A.rrd', 0, 'A', 'Q/s'],
+                ['dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/s'],
+                ['dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/s'],
+                ['dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/s']
             ],
             options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
         },
@@ -545,9 +545,9 @@ jrrd.COLLECTD_RECIPES = {
         {
             title: 'DNS Return Codes',
             data: [
-                ['dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/sec'],
-                ['dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/sec'],
-                ['dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/sec']
+                ['dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/s'],
+                ['dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/s'],
+                ['dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/s']
             ],
             options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
         }
@@ -569,8 +569,8 @@ jrrd.COLLECTD_RECIPES = {
         {
             title: 'Wlan0 Throughput',
             data: [
-                ['interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/sec'],
-                ['interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/sec']
+                ['interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/s'],
+                ['interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/s']
             ],
             options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
         }
@@ -688,10 +688,14 @@ jrrd.ChartCoordinator.prototype.update = function() {
     var endTime = new Date(this.ui[0].endTime.value);
     var chartsLoading = [];
     for(var i=0; i<this.charts.length; i++){
-        chartsLoading.push(
-            this.charts[i].setTimeRange(startTime, endTime));
+        // Don't render charts which are not currently visible
+        if(this.charts[i].template.is(':visible')) {
+            chartsLoading.push(
+                this.charts[i].setTimeRange(startTime, endTime));
+        }
+
     }
-    MochiKit.Async.gatherResults(chartsLoading).addCallback(
+    return MochiKit.Async.gatherResults(chartsLoading).addCallback(
         function(self, startTime, endTime, chartData) {
             var firstUpdate = new Date().getTime();
             var lastUpdate = 0;
@@ -754,14 +758,14 @@ jrrd.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
      **/
     this.ui[0].startTime.value = startTime.toString().split(' ').slice(1,5).join(' ');
     this.ui[0].endTime.value = endTime.toString().split(' ').slice(1,5).join(' ');
-    this.update();
+    return this.update();
 };
 
 jrrd.ChartCoordinator.prototype.reset = function() {
     /**
      * Reset all charts and the input form to the default time range - last hour
      **/
-    this.setTimeRange(new Date(new Date().getTime()-1*60*60*1000),
-                      new Date());
+    return this.setTimeRange(new Date(new Date().getTime()-1*60*60*1000),
+                             new Date());
 };
 

@@ -6,6 +6,7 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
 
         <link rel="stylesheet" type="text/css" href="http://flowplayer.org/tools/demos/dateinput/css/skin1.css" />
+        <link rel="stylesheet" type="text/css" href="tabs-no-images.css" />
         <link rel="stylesheet" type="text/css" href="style.css" />
 
         <script type="text/javascript" src="http://svn.mochikit.com/mochikit/trunk/MochiKit/Base.js"></script>
@@ -24,7 +25,7 @@
         <script type="text/javascript" src="jrrd.js"></script>
         <script type="text/javascript">
         // Recipes for the charts on this page
-        var recipes = [
+        var application_recipes = [
             {
                 title: 'Twisted Web TCP Stats',
                 data: [
@@ -42,33 +43,56 @@
                 ],
                 options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS, jrrd.Chart.STACKED_OPTIONS)
             },
-        ].concat(jrrd.COLLECTD_RECIPES.cpu,jrrd.COLLECTD_RECIPES.memory,jrrd.COLLECTD_RECIPES.load);
+        ];
 
 
         function initialiseCharts(rrdUrlList) {
             /**
              * Setup chart date range controls and all charts
              **/
-            console.log(jrrd.COLLECTD_RECIPES.cpu);
-            // Add dhtml calendars to the date input fields
-            $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
-            $(":date[name=startTime]").data("dateinput").change(function() {
-                $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
-            });
-            $(":date[name=endTime]").data("dateinput").change(function() {
-                $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
-            });
 
             // Extract the chart template from the page
             var chartTemplate = $('.chart-container').remove();
 
-            var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
-            cc.charts = jrrd.collectdChartFactory(
-                rrdUrlList, recipes, function() {
+            function templateFactory(parentEl) {
+                return function() {
                     // The chart template must be appended to the page early, so
                     // that flot can calculate chart dimensions etc.
-                    return chartTemplate.clone().appendTo('.charts');
-                });
+                    return chartTemplate.clone().appendTo(parentEl);
+                }
+            }
+
+            var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
+            var t;
+            // Initialise tabs and update charts when tab is clicked
+            $(".css-tabs:first").bind('click', function(i) {
+                // XXX: Hack to give the tab just enough time to become visible
+                // so that flot can calculate chart dimensions.
+                window.clearTimeout(t);
+                t = window.setTimeout(function() { cc.update(); }, 100);
+            });
+
+            cc.charts = [].concat(
+                jrrd.collectdChartFactory(
+                    rrdUrlList,
+                    [].concat(
+                        jrrd.COLLECTD_RECIPES.cpu,
+                        jrrd.COLLECTD_RECIPES.memory,
+                        jrrd.COLLECTD_RECIPES.load),
+                    templateFactory('.system-charts')),
+                jrrd.collectdChartFactory(
+                    rrdUrlList,
+                    jrrd.COLLECTD_RECIPES.interface,
+                    templateFactory('.network-charts')),
+                jrrd.collectdChartFactory(
+                    rrdUrlList,
+                    jrrd.COLLECTD_RECIPES.dns,
+                    templateFactory('.dns-charts')),
+                jrrd.collectdChartFactory(
+                    rrdUrlList,
+                    application_recipes,
+                    templateFactory('.application-charts'))
+            );
 
             // Update all charts when a selection is made on one of them
             $('.charts').bind("plotselected", function(event, ranges) {
@@ -90,6 +114,18 @@
         }
 
         $(function() {
+            // Add dhtml calendars to the date input fields
+            $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
+            $(":date[name=startTime]").data("dateinput").change(function() {
+                $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
+            });
+            $(":date[name=endTime]").data("dateinput").change(function() {
+                $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
+            });
+
+            // Setup dhtml tabs
+            $(".css-tabs").tabs(".css-panes > div", {history: true});
+
             // Download a list of available rrd files and use it to generate
             // any viable chart recipes
             $.getJSON('rrd_finder.rpy', initialiseCharts);
@@ -98,11 +134,6 @@
     </head>
 
     <body>
-        <div class="notice">
-            <p>To get this demo working, you will need to serve this page from a
-            local webserver and serve the folder that contains your RRD files.</p>
-        </div>
-
         <form method="GET" class="chartRangeControl">
             <div>
                 <label>Start: <input type="date" name="startTime" /></label>
@@ -112,11 +143,21 @@
             </div>
             <div class="range-preview"></div>
         </form>
-        <div class="charts">
-            <div class="chart-container">
-                <h2 class="title"></h2>
-                <div class="chart"></div>
-            </div>
+        <ul class="css-tabs">
+            <li><a href="#system">System</a></li>
+            <li><a href="#network">Network</a></li>
+            <li><a href="#dns">DNS</a></li>
+            <li><a href="#application">Application</a></li>
+        </ul>
+        <div class="css-panes charts">
+            <div class="system-charts"></div>
+            <div class="network-charts"></div>
+            <div class="dns-charts"></div>
+            <div class="application-charts"></div>
+        </div>
+        <div class="chart-container">
+            <h2 class="title"></h2>
+            <div class="chart"></div>
         </div>
     </body>
 </html>
