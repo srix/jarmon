@@ -73,22 +73,22 @@
             });
 
             cc.charts = [].concat(
-                jrrd.collectdChartFactory(
+                jrrd.Chart.fromRecipe(
                     rrdUrlList,
                     [].concat(
                         jrrd.COLLECTD_RECIPES.cpu,
                         jrrd.COLLECTD_RECIPES.memory,
                         jrrd.COLLECTD_RECIPES.load),
                     templateFactory('.system-charts')),
-                jrrd.collectdChartFactory(
+                jrrd.Chart.fromRecipe(
                     rrdUrlList,
                     jrrd.COLLECTD_RECIPES.interface,
                     templateFactory('.network-charts')),
-                jrrd.collectdChartFactory(
+                jrrd.Chart.fromRecipe(
                     rrdUrlList,
                     jrrd.COLLECTD_RECIPES.dns,
                     templateFactory('.dns-charts')),
-                jrrd.collectdChartFactory(
+                jrrd.Chart.fromRecipe(
                     rrdUrlList,
                     application_recipes,
                     templateFactory('.application-charts'))

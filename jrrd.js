@@ -457,6 +457,59 @@ jrrd.Chart.prototype.draw = function() {
 };
 
 
+jrrd.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
+    /**
+     * A factory function to generate a list of I{Chart} from a list of recipes
+     * and a list of available rrd files in collectd path format.
+     *
+     * @param rrdUrlList: A list of rrd download paths
+     * @param recipes: A list of recipe objects
+     * @param templateFactory: A callable which generates an html template for a
+     *      chart.
+     **/
+    var rrdUrlBlob = rrdUrlList.join('\n')
+
+    var charts = [];
+    var dataDict = {};
+
+    var recipe, chartData, template, c, i, j, x, ds, label, rrd, unit, re, match;
+
+    for(i=0; i<recipes.length; i++) {
+        recipe = recipes[i];
+        chartData = [];
+
+        for(j=0; j<recipe['data'].length; j++) {
+            rrd = recipe['data'][j][0];
+            ds = recipe['data'][j][1];
+            label = recipe['data'][j][2];
+            unit = recipe['data'][j][3];
+            re = new RegExp('.*/' + rrd, 'gm');
+            match = rrdUrlBlob.match(re);
+            if(!match) {
+                continue;
+            }
+            for(x=0; x<match.length; x++) {
+
+                if(typeof dataDict[match[x]] == 'undefined') {
+                    dataDict[match[x]] = new jrrd.RrdQueryRemote(match[x], unit);
+                }
+                chartData.push([label, new jrrd.RrdQueryDsProxy(dataDict[match[x]], ds)]);
+            }
+        }
+        if(chartData.length > 0) {
+            template = templateFactory();
+            template.find('.title').text(recipe['title']);
+            c = new jrrd.Chart(template.find('.chart'), recipe['options']);
+            for(j=0; j<chartData.length; j++) {
+                c.addData.apply(c, chartData[j]);
+            }
+            charts.push(c);
+        }
+    }
+    return charts;
+};
+
+
 // Options common to all the chart on this page
 jrrd.Chart.BASE_OPTIONS = {
     grid: {
@@ -498,6 +551,7 @@ jrrd.Chart.STACKED_OPTIONS = {
         }
     }
 };
+
 
 jrrd.COLLECTD_RECIPES = {
     'cpu': [
@@ -576,58 +630,6 @@ jrrd.COLLECTD_RECIPES = {
         }
     ]
 };
-
-jrrd.collectdChartFactory = function(rrdUrlList, recipes, templateFactory) {
-    /**
-     * A factory function to generate a list of I{Chart} from a list of recipes
-     * and a list of available rrd files in collectd path format.
-     *
-     * @param rrdUrlList: A list of rrd download paths
-     * @param recipes: A list of recipe objects
-     * @param templateFactory: A callable which generates an html template for a
-     *      chart.
-     **/
-    var rrdUrlBlob = rrdUrlList.join('\n')
-
-    var charts = [];
-    var dataDict = {};
-
-    var recipe, chartData, template, c, i, j, x, ds, label, rrd, unit, re, match;
-
-    for(i=0; i<recipes.length; i++) {
-        recipe = recipes[i];
-        chartData = [];
-
-        for(j=0; j<recipe['data'].length; j++) {
-            rrd = recipe['data'][j][0];
-            ds = recipe['data'][j][1];
-            label = recipe['data'][j][2];
-            unit = recipe['data'][j][3];
-            re = new RegExp('.*/' + rrd, 'gm');
-            match = rrdUrlBlob.match(re);
-            if(!match) {
-                continue;
-            }
-            for(x=0; x<match.length; x++) {
-
-                if(typeof dataDict[match[x]] == 'undefined') {
-                    dataDict[match[x]] = new jrrd.RrdQueryRemote(match[x], unit);
-                }
-                chartData.push([label, new jrrd.RrdQueryDsProxy(dataDict[match[x]], ds)]);
-            }
-        }
-        if(chartData.length > 0) {
-            template = templateFactory();
-            template.find('.title').text(recipe['title']);
-            c = new jrrd.Chart(template.find('.chart'), recipe['options']);
-            for(j=0; j<chartData.length; j++) {
-                c.addData.apply(c, chartData[j]);
-            }
-            charts.push(c);
-        }
-    }
-    return charts;
-}
 
 
 /**
