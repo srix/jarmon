@@ -1,0 +1,59 @@
+# This is an example of a minimal nginx config file, demonstrating:
+#  * how to set the mime type of served RRD files
+#  * how to configure nginx to compress the rrd files on the fly
+#  * how to setup a /data url alias pointing to the collectd RRD folder
+#
+# Add the relevant parts of this example config to your existing nginx config
+# files, or modify it and use it directly by running the following command line
+# from your Jarmon working directory "nginx -p . -c docs/nginx.conf.example" eg:
+#
+# richard@aziz:~/Projects/Jarmon/trunk$ nginx -p . -c docs/nginx.conf.example
+# [alert]: could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)
+#
+# The error line is normal if you are running nginx as an unprivileged user.
+
+
+daemon off;
+pid nginx.pid;
+error_log nginx.error.log info;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    sendfile        on;
+    keepalive_timeout  65;
+    tcp_nodelay        on;
+
+    gzip  on;
+    gzip_disable "MSIE [1-6]\.(?!.*SV1)";
+
+    client_body_temp_path /tmp/nginx_body;
+    proxy_temp_path /tmp/nginx_proxy;
+    fastcgi_temp_path /tmp/nginx_fastcgi;
+
+    types {
+        application/octet-stream  rrd;
+    }
+
+    server {
+        listen 8080 default;
+        server_name localhost;
+
+        access_log nginx.localhost.access.log;
+        error_log nginx.localhost.error.log;
+
+        gzip_types application/octet-stream;
+
+        location / {
+            root   .;
+            index  index.html;
+        }
+
+        location /data {
+            alias /var/lib/collectd/rrd/aziz;
+            autoindex on;
+        }
+    }
+}
