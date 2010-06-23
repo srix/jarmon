@@ -14,8 +14,8 @@
  * - MochiKit.Async: http://www.mochikit.com/
  */
 
-if(typeof jrrd == 'undefined') {
-    var jrrd = {};
+if(typeof jarmon == 'undefined') {
+    var jarmon = {};
 }
 
 /**
@@ -25,7 +25,7 @@ if(typeof jrrd == 'undefined') {
  * @return: A I{MochiKit.Async.Deferred} which will callback with an instance of
  *          I{javascriptrrd.BinaryFile}
  **/
-jrrd.downloadBinary = function(url) {
+jarmon.downloadBinary = function(url) {
     var d = new MochiKit.Async.Deferred();
 
     $.ajax({
@@ -74,12 +74,12 @@ jrrd.downloadBinary = function(url) {
  * @param cfName: A {String} name of an RRD consolidation function
  * @return: A flot compatible data series object
  **/
-jrrd.RrdQuery = function(rrd, unit) {
+jarmon.RrdQuery = function(rrd, unit) {
     this.rrd = rrd;
     this.unit = unit;
 };
 
-jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
+jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
     /**
      * Generate a Flot compatible data object containing rows between start and
      * end time. The rows are taken from the first RRA whose data spans the
@@ -171,14 +171,14 @@ jrrd.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
  * @param url: The url I{String} of a remote RRD file
  * @param unit: The unit suffix I{String} of this data eg 'bit/sec'
  **/
-jrrd.RrdQueryRemote = function(url, unit) {
+jarmon.RrdQueryRemote = function(url, unit) {
     this.url = url;
     this.unit = unit;
     this.lastUpdate = 0;
     this._download = null;
 };
 
-jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
+jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     /**
      * Return a Flot compatible data series asynchronously.
      *
@@ -194,7 +194,7 @@ jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     // end time.
     // Don't start another download if one is already in progress.
     if(!this._download || (this._download.fired > -1 && this.lastUpdate < endTimestamp )) {
-        this._download = jrrd.downloadBinary(this.url)
+        this._download = jarmon.downloadBinary(this.url)
                 .addCallback(
                     function(self, binary) {
                         // Upon successful download convert the resulting binary
@@ -210,7 +210,7 @@ jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     // returning a flot compatible data object to the caller.
     var ret = new MochiKit.Async.Deferred().addCallback(
         function(self, startTime, endTime, dsId, rrd) {
-            return new jrrd.RrdQuery(rrd, self.unit).getData(startTime, endTime, dsId);
+            return new jarmon.RrdQuery(rrd, self.unit).getData(startTime, endTime, dsId);
         }, this, startTime, endTime, dsId);
 
     // Add a pair of callbacks to the current download which will callback the
@@ -235,13 +235,13 @@ jrrd.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
  * @param rrdQuery: An I{RrdQueryRemote}
  * @param dsId: An index or keyname of an RRD DS
  **/
-jrrd.RrdQueryDsProxy = function(rrdQuery, dsId) {
+jarmon.RrdQueryDsProxy = function(rrdQuery, dsId) {
     this.rrdQuery = rrdQuery;
     this.dsId = dsId;
     this.unit = rrdQuery.unit;
 };
 
-jrrd.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
+jarmon.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
     /**
      * Call I{RrdQueryRemote.getData} with a particular dsId
      **/
@@ -257,7 +257,7 @@ jrrd.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
  * @param options: An I{Object} containing Flot options which describe how the
  *                 chart should be drawn.
  **/
-jrrd.Chart = function(template, options) {
+jarmon.Chart = function(template, options) {
     this.template = template;
     this.options = jQuery.extend(true, {yaxis: {}}, options);
     this.data = [];
@@ -327,7 +327,7 @@ jrrd.Chart = function(template, options) {
     };
 };
 
-jrrd.Chart.prototype.addData = function(label, db, enabled) {
+jarmon.Chart.prototype.addData = function(label, db, enabled) {
     /**
      * Add details of a remote RRD data source whose data will be added to this
      * chart.
@@ -344,7 +344,7 @@ jrrd.Chart.prototype.addData = function(label, db, enabled) {
     this.data.push([label, db, enabled]);
 };
 
-jrrd.Chart.prototype.switchDataEnabled = function(label) {
+jarmon.Chart.prototype.switchDataEnabled = function(label) {
     /**
      * Enable / Disable a single data source
      *
@@ -358,7 +358,7 @@ jrrd.Chart.prototype.switchDataEnabled = function(label) {
     }
 };
 
-jrrd.Chart.prototype.setTimeRange = function(startTime, endTime) {
+jarmon.Chart.prototype.setTimeRange = function(startTime, endTime) {
     /**
      * Alter the time range of this chart and redraw
      *
@@ -370,7 +370,7 @@ jrrd.Chart.prototype.setTimeRange = function(startTime, endTime) {
     return this.draw();
 }
 
-jrrd.Chart.prototype.draw = function() {
+jarmon.Chart.prototype.draw = function() {
     /**
      * Draw the chart
      * A 'chart_loading' event is triggered before the data is requested
@@ -457,7 +457,7 @@ jrrd.Chart.prototype.draw = function() {
 };
 
 
-jrrd.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
+jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
     /**
      * A factory function to generate a list of I{Chart} from a list of recipes
      * and a list of available rrd files in collectd path format.
@@ -491,15 +491,15 @@ jrrd.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
             for(x=0; x<match.length; x++) {
 
                 if(typeof dataDict[match[x]] == 'undefined') {
-                    dataDict[match[x]] = new jrrd.RrdQueryRemote(match[x], unit);
+                    dataDict[match[x]] = new jarmon.RrdQueryRemote(match[x], unit);
                 }
-                chartData.push([label, new jrrd.RrdQueryDsProxy(dataDict[match[x]], ds)]);
+                chartData.push([label, new jarmon.RrdQueryDsProxy(dataDict[match[x]], ds)]);
             }
         }
         if(chartData.length > 0) {
             template = templateFactory();
             template.find('.title').text(recipe['title']);
-            c = new jrrd.Chart(template.find('.chart'), recipe['options']);
+            c = new jarmon.Chart(template.find('.chart'), recipe['options']);
             for(j=0; j<chartData.length; j++) {
                 c.addData.apply(c, chartData[j]);
             }
@@ -511,7 +511,7 @@ jrrd.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
 
 
 // Options common to all the chart on this page
-jrrd.Chart.BASE_OPTIONS = {
+jarmon.Chart.BASE_OPTIONS = {
     grid: {
         clickable: false,
         borderWidth: 1,
@@ -543,7 +543,7 @@ jrrd.Chart.BASE_OPTIONS = {
 };
 
 // Extra options to generate a stacked chart
-jrrd.Chart.STACKED_OPTIONS = {
+jarmon.Chart.STACKED_OPTIONS = {
     series: {
         stack: true,
         lines: {
@@ -553,7 +553,7 @@ jrrd.Chart.STACKED_OPTIONS = {
 };
 
 
-jrrd.COLLECTD_RECIPES = {
+jarmon.COLLECTD_RECIPES = {
     'cpu': [
         {
             title: 'CPU Usage',
@@ -565,8 +565,8 @@ jrrd.COLLECTD_RECIPES = {
                 ['cpu-0/cpu-user.rrd', 0, 'CPU-0 User', '%'],
                 ['cpu-1/cpu-user.rrd', 0, 'CPU-1 User', '%']
             ],
-            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS,
-                                             jrrd.Chart.STACKED_OPTIONS)
+            options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS,
+                                             jarmon.Chart.STACKED_OPTIONS)
         },
     ],
 
@@ -579,8 +579,8 @@ jrrd.COLLECTD_RECIPES = {
                 ['memory/memory-cached.rrd', 0, 'Cached', 'B'],
                 ['memory/memory-free.rrd', 0, 'Free', 'B']
             ],
-            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS,
-                                             jrrd.Chart.STACKED_OPTIONS)
+            options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS,
+                                             jarmon.Chart.STACKED_OPTIONS)
         }
     ],
 
@@ -593,7 +593,7 @@ jrrd.COLLECTD_RECIPES = {
                 ['dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/s'],
                 ['dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/s']
             ],
-            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+            options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
         },
 
         {
@@ -603,7 +603,7 @@ jrrd.COLLECTD_RECIPES = {
                 ['dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/s'],
                 ['dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/s']
             ],
-            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+            options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
         }
     ],
 
@@ -615,7 +615,7 @@ jrrd.COLLECTD_RECIPES = {
                 ['load/load.rrd', 'midterm', 'Medium Term', ''],
                 ['load/load.rrd', 'longterm', 'Long Term', '']
             ],
-            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+            options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
         }
     ],
 
@@ -626,7 +626,7 @@ jrrd.COLLECTD_RECIPES = {
                 ['interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/s'],
                 ['interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/s']
             ],
-            options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS)
+            options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
         }
     ]
 };
@@ -639,7 +639,7 @@ jrrd.COLLECTD_RECIPES = {
  * @param ui: A one element I{jQuery} containing an input form and placeholders
  *            for the timeline and for the series of charts.
  **/
-jrrd.ChartCoordinator = function(ui) {
+jarmon.ChartCoordinator = function(ui) {
     this.ui = ui;
     this.charts = [];
 
@@ -681,7 +681,7 @@ jrrd.ChartCoordinator = function(ui) {
     });
 };
 
-jrrd.ChartCoordinator.prototype.update = function() {
+jarmon.ChartCoordinator.prototype.update = function() {
     /**
      * Grab the start and end time from the ui form, highlight the range on the
      * range timeline and set the time range of all the charts and redraw.
@@ -751,7 +751,7 @@ jrrd.ChartCoordinator.prototype.update = function() {
         }, this, startTime, endTime);
 };
 
-jrrd.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
+jarmon.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
     /**
      * Set the start and end time fields in the form and trigger an update
      *
@@ -763,7 +763,7 @@ jrrd.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
     return this.update();
 };
 
-jrrd.ChartCoordinator.prototype.reset = function() {
+jarmon.ChartCoordinator.prototype.reset = function() {
     /**
      * Reset all charts and the input form to the default time range - last hour
      **/

@@ -34,7 +34,14 @@ http {
     fastcgi_temp_path /tmp/nginx_fastcgi;
 
     types {
-        application/octet-stream  rrd;
+        application/octet-stream              rrd;
+        text/html                             html htm shtml;
+        text/css                              css;
+        text/xml                              xml rss;
+        image/gif                             gif;
+        image/jpeg                            jpeg jpg;
+        application/x-javascript              js;
+        text/plain                            txt;
     }
 
     server {

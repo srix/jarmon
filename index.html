@@ -2,7 +2,8 @@
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>
-        <title>RRD Charts</title>
+        <title>Jarmon - customisable, Javascript generated charts from
+        Collectd RRD data</title>
         <meta http-equiv="content-type" content="text/html;charset=utf-8" />
 
         <link rel="stylesheet" type="text/css" href="assets/css/style.css" />
@@ -22,12 +23,12 @@
 
         <script type="text/javascript" src="http://cdn.jquerytools.org/1.2.2/all/jquery.tools.min.js"></script>
 
-        <script type="text/javascript" src="jrrd.js"></script>
+        <script type="text/javascript" src="jarmon.js"></script>
         <script type="text/javascript">
         // Recipes for the charts on this page
         var application_recipes = [
             {
-                title: 'Twisted Web TCP Stats',
+                title: 'Jarmon Webserver TCP Stats',
                 data: [
                     ['tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
                     ['tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
@@ -41,7 +42,7 @@
                     ['tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
                     ['tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
                 ],
-                options: jQuery.extend(true, {}, jrrd.Chart.BASE_OPTIONS, jrrd.Chart.STACKED_OPTIONS)
+                options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
             },
         ];
 
@@ -62,7 +63,7 @@
                 }
             }
 
-            var cc = new jrrd.ChartCoordinator($('.chartRangeControl'));
+            var cc = new jarmon.ChartCoordinator($('.chartRangeControl'));
             var t;
             // Initialise tabs and update charts when tab is clicked
             $(".css-tabs:first").bind('click', function(i) {
@@ -73,22 +74,22 @@
             });
 
             cc.charts = [].concat(
-                jrrd.Chart.fromRecipe(
+                jarmon.Chart.fromRecipe(
                     rrdUrlList,
                     [].concat(
-                        jrrd.COLLECTD_RECIPES.cpu,
-                        jrrd.COLLECTD_RECIPES.memory,
-                        jrrd.COLLECTD_RECIPES.load),
+                        jarmon.COLLECTD_RECIPES.cpu,
+                        jarmon.COLLECTD_RECIPES.memory,
+                        jarmon.COLLECTD_RECIPES.load),
                     templateFactory('.system-charts')),
-                jrrd.Chart.fromRecipe(
+                jarmon.Chart.fromRecipe(
                     rrdUrlList,
-                    jrrd.COLLECTD_RECIPES.interface,
+                    jarmon.COLLECTD_RECIPES.interface,
                     templateFactory('.network-charts')),
-                jrrd.Chart.fromRecipe(
+                jarmon.Chart.fromRecipe(
                     rrdUrlList,
-                    jrrd.COLLECTD_RECIPES.dns,
+                    jarmon.COLLECTD_RECIPES.dns,
                     templateFactory('.dns-charts')),
-                jrrd.Chart.fromRecipe(
+                jarmon.Chart.fromRecipe(
                     rrdUrlList,
                     application_recipes,
                     templateFactory('.application-charts'))
