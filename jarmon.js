@@ -75,13 +75,12 @@ jarmon.localTimeFormatter = function (v, axis) {
         "year": 365.2425 * 24 * 60 * 60 * 1000
     };
 
-    // Offset the input timestamp for local time
-    var offset = new Date().getTimezoneOffset() * 60 * 1000;
-    var d = new Date(v - offset);
+    // Offset the input timestamp by the user defined amount
+    var d = new Date(v + axis.options.tzoffset);
 
     // first check global format
     if (axis.options.timeformat != null)
-        return $.plot.formatDate(d, opts.timeformat, opts.monthNames);
+        return $.plot.formatDate(d, axis.options.timeformat, axis.options.monthNames);
 
     var t = axis.tickSize[0] * timeUnitSize[axis.tickSize[1]];
     var span = axis.max - axis.min;
@@ -660,8 +659,13 @@ jarmon.ChartCoordinator.prototype.update = function() {
      **/
     var startTime = new Date(this.ui[0].startTime.value);
     var endTime = new Date(this.ui[0].endTime.value);
+    var tzoffset = parseInt(this.ui[0].tzoffset.value) * 60 * 60 * 1000;
+
+    this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
+
     var chartsLoading = [];
     for(var i=0; i<this.charts.length; i++){
+        this.charts[i].options.xaxis.tzoffset = tzoffset;
         // Don't render charts which are not currently visible
         if(this.charts[i].template.is(':visible')) {
             chartsLoading.push(
@@ -739,6 +743,13 @@ jarmon.ChartCoordinator.prototype.reset = function() {
     /**
      * Reset all charts and the input form to the default time range - last hour
      **/
+
+    // Default timezone offset based on localtime
+    var tzoffset = -1 * new Date().getTimezoneOffset() / 60;
+    if(tzoffset > 0) {
+        tzoffset = '+' + tzoffset;
+    }
+    this.ui[0].tzoffset.value = tzoffset;
     return this.setTimeRange(new Date(new Date().getTime()-1*60*60*1000),
                              new Date());
 };
