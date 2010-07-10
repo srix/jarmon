@@ -60,6 +60,55 @@ jarmon.downloadBinary = function(url) {
     return d;
 };
 
+jarmon.localTimeFormatter = function (v, axis) {
+    /**
+     * Copied from jquery.flot.js and modified to allow timezone
+     * adjustment.
+     **/
+    // map of app. size of time units in milliseconds
+    var timeUnitSize = {
+        "second": 1000,
+        "minute": 60 * 1000,
+        "hour": 60 * 60 * 1000,
+        "day": 24 * 60 * 60 * 1000,
+        "month": 30 * 24 * 60 * 60 * 1000,
+        "year": 365.2425 * 24 * 60 * 60 * 1000
+    };
+
+    // Offset the input timestamp for local time
+    var offset = new Date().getTimezoneOffset() * 60 * 1000;
+    var d = new Date(v - offset);
+
+    // first check global format
+    if (axis.options.timeformat != null)
+        return $.plot.formatDate(d, opts.timeformat, opts.monthNames);
+
+    var t = axis.tickSize[0] * timeUnitSize[axis.tickSize[1]];
+    var span = axis.max - axis.min;
+    var suffix = (axis.options.twelveHourClock) ? " %p" : "";
+
+    if (t < timeUnitSize.minute)
+        fmt = "%h:%M:%S" + suffix;
+    else if (t < timeUnitSize.day) {
+        if (span < 2 * timeUnitSize.day)
+            fmt = "%h:%M" + suffix;
+        else
+            fmt = "%b %d %h:%M" + suffix;
+    }
+    else if (t < timeUnitSize.month)
+        fmt = "%b %d";
+    else if (t < timeUnitSize.year) {
+        if (span < timeUnitSize.year)
+            fmt = "%b";
+        else
+            fmt = "%b %y";
+    }
+    else
+        fmt = "%y";
+
+    return $.plot.formatDate(d, fmt, axis.options.monthNames);
+};
+
 /**
  * A wrapper around an instance of javascriptrrd.RRDFile which provides a
  * convenient way to query the RRDFile based on time range, RRD data source (DS)
@@ -538,7 +587,8 @@ jarmon.Chart.BASE_OPTIONS = {
         shadowSize: 0
     },
     xaxis: {
-        mode: "time"
+        mode: "time",
+        tickFormatter: jarmon.localTimeFormatter
     }
 };
 
@@ -588,7 +638,8 @@ jarmon.ChartCoordinator = function(ui) {
             mode: 'x'
         },
         xaxis: {
-            mode: "time"
+            mode: 'time',
+            tickFormatter: jarmon.localTimeFormatter
         },
         yaxis: {
             ticks: []
