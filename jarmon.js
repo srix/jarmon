@@ -750,7 +750,7 @@ jarmon.ChartCoordinator.prototype.reset = function() {
         tzoffset = '+' + tzoffset;
     }
     this.ui[0].tzoffset.value = tzoffset;
-    return this.setTimeRange(new Date(new Date().getTime()-1*60*60*1000),
+    return this.setTimeRange(new Date(new Date().getTime()-2*60*60*1000),
                              new Date());
 };
 
