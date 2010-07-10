@@ -116,15 +116,6 @@
         }
 
         $(function() {
-            // Add dhtml calendars to the date input fields
-            $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
-            $(":date[name=startTime]").data("dateinput").change(function() {
-                $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
-            });
-            $(":date[name=endTime]").data("dateinput").change(function() {
-                $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
-            });
-
             // Setup dhtml tabs
             $(".css-tabs").tabs(".css-panes > div", {history: true});
 
@@ -143,11 +134,11 @@
     <body>
         <form method="GET" class="chartRangeControl">
             <div>
-                <label>Start: <input type="date" name="startTime" /></label>
-                <label>End: <input type="date" name="endTime" /></label>
-                <label>UTC: <input type="text" name="tzoffset" size="2" /></label>
+                <label><select name="from"></select></label>
+                <input type="hidden" name="to" value="0" />
+                <label><img src="assets/icons/calendar.png" alt="calendar" align="center" /> </label>
+                <label><select name="tzoffset"></select></label>
                 <input type="submit" value="Update" />
-                <input type="reset" value="Reset" />
             </div>
             <div class="range-preview"></div>
         </form>

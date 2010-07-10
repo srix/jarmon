@@ -611,6 +611,57 @@ jarmon.Chart.STACKED_OPTIONS = {
  **/
 jarmon.ChartCoordinator = function(ui) {
     this.ui = ui;
+
+    // Populate the time range selector
+    var timeRangeChoices = [
+        [-60*60*1000*1, 'last hour'],
+        [-60*60*1000*6, 'last six hours'],
+        [-60*60*1000*24, 'last day'],
+        [-60*60*1000*24*7, 'last week'],
+        [-60*60*1000*24*31, 'last month'],
+        [-60*60*1000*24*365, 'last year']
+    ];
+
+    var val, label, option, options = this.ui.find('select[name="from"]');
+
+    for(var i=0; i<timeRangeChoices.length; i++) {
+        val = timeRangeChoices[i][0];
+        label = timeRangeChoices[i][1];
+        options.append($('<option />').attr('value', val).text(label));
+    }
+
+    // Default timezone offset based on localtime
+    var tzoffset = -1 * new Date().getTimezoneOffset() / 60;
+
+    // Populate a list of tzoffset options
+    options = this.ui.find('select[name="tzoffset"]');
+    for(var i=-12; i<=12; i++) {
+        label = 'UTC';
+        if(i >= 0) {
+            label += ' + ';
+        } else {
+            label += ' - ';
+        }
+        label += Math.abs(i) + 'h';
+        option = $('<option />').attr('value', i*60*60*1000).text(label);
+        if(i == tzoffset) {
+            option.attr('selected', 'selected');
+        }
+        options.append(option);
+    }
+
+    // Add dhtml calendars to the date input fields
+    /*
+    $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
+    $(":date[name=startTime]").data("dateinput").change(function() {
+        $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
+    });
+    $(":date[name=endTime]").data("dateinput").change(function() {
+        $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
+    });
+    */
+
+
     this.charts = [];
 
     var self = this;
@@ -657,9 +708,13 @@ jarmon.ChartCoordinator.prototype.update = function() {
      * Grab the start and end time from the ui form, highlight the range on the
      * range timeline and set the time range of all the charts and redraw.
      **/
-    var startTime = new Date(this.ui[0].startTime.value);
-    var endTime = new Date(this.ui[0].endTime.value);
-    var tzoffset = parseInt(this.ui[0].tzoffset.value) * 60 * 60 * 1000;
+    var fromOffset = parseInt(this.ui[0].from.value);
+    var startTime = new Date(new Date().getTime() + fromOffset);
+
+    var toOffset = parseInt(this.ui[0].to.value);
+    var endTime = new Date(new Date().getTime() + toOffset);
+
+    var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val());
 
     this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
 
@@ -734,8 +789,8 @@ jarmon.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
      * @param startTime: The start time I{Date}
      * @param endTime: The end time I{Date}
      **/
-    this.ui[0].startTime.value = startTime.toString().split(' ').slice(1,5).join(' ');
-    this.ui[0].endTime.value = endTime.toString().split(' ').slice(1,5).join(' ');
+    //this.ui[0].startTime.value = startTime.toString().split(' ').slice(1,5).join(' ');
+    //this.ui[0].endTime.value = endTime.toString().split(' ').slice(1,5).join(' ');
     return this.update();
 };
 
@@ -743,13 +798,6 @@ jarmon.ChartCoordinator.prototype.reset = function() {
     /**
      * Reset all charts and the input form to the default time range - last hour
      **/
-
-    // Default timezone offset based on localtime
-    var tzoffset = -1 * new Date().getTimezoneOffset() / 60;
-    if(tzoffset > 0) {
-        tzoffset = '+' + tzoffset;
-    }
-    this.ui[0].tzoffset.value = tzoffset;
     return this.setTimeRange(new Date(new Date().getTime()-2*60*60*1000),
                              new Date());
 };
