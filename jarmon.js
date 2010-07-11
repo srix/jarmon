@@ -675,10 +675,12 @@ jarmon.ChartCoordinator = function(ui) {
         }
     };
 
-    // When a selection is made on the range timeline, redraw all the charts.
+    // When a selection is made on the range timeline, or any of my charts
+    // redraw all the charts.
     this.ui.bind("plotselected", function(event, ranges) {
-        self.setTimeRange(new Date(ranges.xaxis.from),
-                          new Date(ranges.xaxis.to));
+        self.ui.find('[name="from_standard"]').val('custom');
+        self.setTimeRange(ranges.xaxis.from, ranges.xaxis.to);
+        self.update();
     });
 };
 

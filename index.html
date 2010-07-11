@@ -96,12 +96,6 @@
                     templateFactory('.application-charts'))
             );
 
-            // Update all charts when a selection is made on one of them
-            $('.charts').bind("plotselected", function(event, ranges) {
-                cc.setTimeRange(new Date(ranges.xaxis.from),
-                                new Date(ranges.xaxis.to));
-            });
-
             // Show a loading icon when a chart is being redrawn
             $('.chart-container').live('chart_loading', function(e) {
                 $(this).find('.title').addClass('loading');
@@ -143,39 +137,41 @@
     </head>
 
     <body>
-        <form class="chartRangeControl">
-            <div>
-                <span class="timerange_control custom">
-                    <input name="from_custom" type="date"  />
-                    <input name="to_custom" type="date"  />
-                </span>
-                <span class="timerange_control standard">
-                    <select name="from_standard">
-                        <option>custom</option>
-                    </select>
-                </span>
-                <input name="from" type="hidden"  />
-                <input name="to" type="hidden"  />
-                <select name="tzoffset"></select>
-                <input name="action" value="Update" type="button" />
+        <div class="chartRangeControl">
+            <form>
+                <div>
+                    <span class="timerange_control custom">
+                        <input name="from_custom" type="date"  />
+                        <input name="to_custom" type="date"  />
+                    </span>
+                    <span class="timerange_control standard">
+                        <select name="from_standard">
+                            <option>custom</option>
+                        </select>
+                    </span>
+                    <input name="from" type="hidden"  />
+                    <input name="to" type="hidden"  />
+                    <select name="tzoffset"></select>
+                    <input name="action" value="Update" type="button" />
+                </div>
+                <div class="range-preview"></div>
+            </form>
+            <ul class="css-tabs">
+                <li><a href="#system">System</a></li>
+                <li><a href="#network">Network</a></li>
+                <li><a href="#dns">DNS</a></li>
+                <li><a href="#application">Application</a></li>
+            </ul>
+            <div class="css-panes charts">
+                <div class="system-charts"></div>
+                <div class="network-charts"></div>
+                <div class="dns-charts"></div>
+                <div class="application-charts"></div>
             </div>
-            <div class="range-preview"></div>
-        </form>
-        <ul class="css-tabs">
-            <li><a href="#system">System</a></li>
-            <li><a href="#network">Network</a></li>
-            <li><a href="#dns">DNS</a></li>
-            <li><a href="#application">Application</a></li>
-        </ul>
-        <div class="css-panes charts">
-            <div class="system-charts"></div>
-            <div class="network-charts"></div>
-            <div class="dns-charts"></div>
-            <div class="application-charts"></div>
-        </div>
-        <div class="chart-container">
-            <h2 class="title"></h2>
-            <div class="chart"></div>
+            <div class="chart-container">
+                <h2 class="title"></h2>
+                <div class="chart"></div>
+            </div>
         </div>
     </body>
 </html>
