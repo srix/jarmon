@@ -108,6 +108,7 @@ jarmon.localTimeFormatter = function (v, axis) {
     return $.plot.formatDate(d, fmt, axis.options.monthNames);
 };
 
+
 /**
  * A wrapper around an instance of javascriptrrd.RRDFile which provides a
  * convenient way to query the RRDFile based on time range, RRD data source (DS)
@@ -654,6 +655,24 @@ jarmon.ChartCoordinator = function(ui) {
         }
     });
 
+    // Update the time ranges and redraw charts when the custom datetime inputs
+    // are changed
+    this.ui.find('[name="from_custom"]').bind('change',
+        function(e) {
+            self.ui.find('[name="from_standard"]').val('custom');
+            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
+            self.setTimeRange(new Date(this.value + ' UTC').getTime() - tzoffset, null);
+            self.update();
+        }
+    );
+    this.ui.find('[name="to_custom"]').bind('change',
+        function(e) {
+            self.ui.find('[name="from_standard"]').val('custom');
+            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
+            self.setTimeRange(null, new Date(this.value + ' UTC').getTime() - tzoffset);
+            self.update();
+        }
+    );
     // Populate a list of tzoffset options
     var label, val;
     options = this.ui.find('select[name="tzoffset"]');
@@ -791,9 +810,12 @@ jarmon.ChartCoordinator.prototype.setTimeRange = function(from, to) {
      * @param startTime: The start time I{Date}
      * @param endTime: The end time I{Date}
      **/
-
-    this.ui.find('[name="from"]').val(from);
-    this.ui.find('[name="to"]').val(to);
+    if(from != null) {
+        this.ui.find('[name="from"]').val(from);
+    }
+    if(to != null) {
+        this.ui.find('[name="to"]').val(to);
+    }
 };
 
 jarmon.ChartCoordinator.prototype.init = function() {

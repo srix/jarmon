@@ -21,7 +21,7 @@
         <script type="text/javascript" src="http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/binaryXHR.js?revision=1.5&content-type=text%2Fplain"></script>
         <script type="text/javascript" src="http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/rrdFile.js?revision=1.8&content-type=text%2Fplain"></script>
 
-        <script type="text/javascript" src="http://cdn.jquerytools.org/1.2.2/all/jquery.tools.min.js"></script>
+        <script type="text/javascript" src="http://cdn.jquerytools.org/1.2.3/all/jquery.tools.min.js"></script>
 
         <script type="text/javascript" src="jarmon.js"></script>
         <script type="text/javascript" src="docs/jarmon_example_recipes.js"></script>
@@ -110,16 +110,28 @@
         }
 
         $(function() {
-    // Add dhtml calendars to the date input fields
-    /*
-    $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
-    $(":date[name=startTime]").data("dateinput").change(function() {
-        $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
-    });
-    $(":date[name=endTime]").data("dateinput").change(function() {
-        $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
-    });
-    */
+
+            // Add dhtml calendars to the date input fields
+            $(".timerange_control.custom input")
+                .dateinput({
+                    'format': 'dd mmm yyyy 00:00:00',
+                    'max': +1,
+                    'css': {'input': 'jquerytools_date'}})
+                .bind('onBeforeShow', function(e) {
+                    $(this).data('dateinput').setValue(new Date(this.value));
+                });
+            $(".timerange_control.custom input").bind('onHide',
+                function(e) {
+                    $(this).trigger('change');
+                });
+
+            $(":date[name=from_custom]").data("dateinput").change(function() {
+                $(":date[name=to_custom]").data("dateinput").setMin(this.getValue(), true);
+            });
+            $(":date[name=to_custom]").data("dateinput").change(function() {
+                $(":date[name=from_custom]").data("dateinput").setMax(this.getValue(), true);
+            });
+
             // Setup dhtml tabs
             $(".css-tabs").tabs(".css-panes > div", {history: true});
 
@@ -141,8 +153,8 @@
             <form>
                 <div>
                     <span class="timerange_control custom">
-                        <input name="from_custom" type="date"  />
-                        <input name="to_custom" type="date"  />
+                        <input name="from_custom" type="text"  />
+                        <input name="to_custom" type="text"  />
                     </span>
                     <span class="timerange_control standard">
                         <select name="from_standard">
