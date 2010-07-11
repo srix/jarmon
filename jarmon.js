@@ -655,16 +655,21 @@ jarmon.ChartCoordinator = function(ui) {
     });
 
     // Populate a list of tzoffset options
-    var label;
+    var label, val;
     options = this.ui.find('select[name="tzoffset"]');
     for(var i=-12; i<=12; i++) {
         label = 'UTC';
-        if(i >= 0) {
+        val = i;
+        if(val >= 0) {
             label += ' + ';
         } else {
             label += ' - ';
         }
-        label += Math.abs(i) + 'h';
+        val = Math.abs(val).toString();
+        if(val.length == 1) {
+            label += '0';
+        }
+        label += val + '00';
         options.append($('<option />').attr('value', i*60*60*1000).text(label));
     }
 
