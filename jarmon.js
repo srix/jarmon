@@ -606,7 +606,9 @@ jarmon.Chart.STACKED_OPTIONS = {
 // A selection of useful time ranges
 jarmon.timeRangeShortcuts = [
     ['last hour', function(now) { return [now-60*60*1000*1, now]; }],
-    ['last six hours', function(now) { return [now-60*60*1000*6, now]; }],
+    ['last 3 hours', function(now) { return [now-60*60*1000*3, now]; }],
+    ['last 6 hours', function(now) { return [now-60*60*1000*6, now]; }],
+    ['last 12 hours', function(now) { return [now-60*60*1000*12, now]; }],
     ['last day', function(now) { return [now-60*60*1000*24, now]; }],
     ['last week', function(now) { return [now-60*60*1000*24*7, now]; }],
     ['last month', function(now) { return [now-60*60*1000*24*31, now]; }],
@@ -827,6 +829,7 @@ jarmon.ChartCoordinator.prototype.init = function() {
     this.ui.find('[name="tzoffset"]').val(tzoffset);
 
     // Default to 1 hour
-    this.ui.find('[name="from_standard"]').val('last hour');
+    this.ui.find('[name="from_standard"]').val('last 3 hours');
+    this.update();
 };
 
