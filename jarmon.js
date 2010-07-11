@@ -142,12 +142,12 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
      * @return: A Flot compatible data series I{Object}
      *          eg {label:'', data:[], unit: ''}
      **/
-    var startTimestamp = startTime.getTime()/1000;
+    var startTimestamp = startTime/1000;
 
     var lastUpdated = this.rrd.getLastUpdate();
     var endTimestamp = lastUpdated;
     if(endTime) {
-        endTimestamp = endTime.getTime()/1000;
+        endTimestamp = endTime/1000;
         // If end time stamp is beyond the range of this rrd then reset it
         if(lastUpdated < endTimestamp) {
             endTimestamp = lastUpdated;
@@ -235,7 +235,7 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
      * @returns: A I{MochiKit.Async.Deferred} which calls back with a flot data
      *           series object I{Object}
      **/
-    var endTimestamp = endTime.getTime()/1000;
+    var endTimestamp = endTime/1000;
 
     // Download the rrd if there has never been a download or if the last
     // completed download had a lastUpdated timestamp less than the requested
@@ -441,8 +441,8 @@ jarmon.Chart.prototype.draw = function() {
             result = new MochiKit.Async.Deferred();
             result.callback({
                 data: [
-                    [this.startTime.getTime(), 0],
-                    [this.endTime.getTime(), 0]
+                    [this.startTime, 0],
+                    [this.endTime, 0]
                 ],
                 lines: {
                     lineWidth: 0
@@ -602,6 +602,17 @@ jarmon.Chart.STACKED_OPTIONS = {
 };
 
 
+// A selection of useful time ranges
+jarmon.timeRangeShortcuts = [
+    ['last hour', function(now) { return [now-60*60*1000*1, now]; }],
+    ['last six hours', function(now) { return [now-60*60*1000*6, now]; }],
+    ['last day', function(now) { return [now-60*60*1000*24, now]; }],
+    ['last week', function(now) { return [now-60*60*1000*24*7, now]; }],
+    ['last month', function(now) { return [now-60*60*1000*24*31, now]; }],
+    ['last year', function(now) { return [now-60*60*1000*24*365, now]; }]
+];
+
+
 /**
  * Presents the user with a form and a timeline with which they can choose a
  * time range and co-ordinates the refreshing of a series of charts.
@@ -610,30 +621,23 @@ jarmon.Chart.STACKED_OPTIONS = {
  *            for the timeline and for the series of charts.
  **/
 jarmon.ChartCoordinator = function(ui) {
+    var self = this;
     this.ui = ui;
 
-    // Populate the time range selector
-    var timeRangeChoices = [
-        [-60*60*1000*1, 'last hour'],
-        [-60*60*1000*6, 'last six hours'],
-        [-60*60*1000*24, 'last day'],
-        [-60*60*1000*24*7, 'last week'],
-        [-60*60*1000*24*31, 'last month'],
-        [-60*60*1000*24*365, 'last year']
-    ];
-
-    var val, label, option, options = this.ui.find('select[name="from"]');
-
-    for(var i=0; i<timeRangeChoices.length; i++) {
-        val = timeRangeChoices[i][0];
-        label = timeRangeChoices[i][1];
-        options.append($('<option />').attr('value', val).text(label));
+    var options = this.ui.find('select[name="from_standard"]');
+    for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
+        options.append($('<option />').text(jarmon.timeRangeShortcuts[i][0]));
     }
 
-    // Default timezone offset based on localtime
-    var tzoffset = -1 * new Date().getTimezoneOffset() / 60;
+    options.bind('change', function(e) {
+        // No point in updating if the user chose custom.
+        if($(this).val() != 'custom') {
+            self.update();
+        }
+    });
 
     // Populate a list of tzoffset options
+    var label;
     options = this.ui.find('select[name="tzoffset"]');
     for(var i=-12; i<=12; i++) {
         label = 'UTC';
@@ -643,39 +647,14 @@ jarmon.ChartCoordinator = function(ui) {
             label += ' - ';
         }
         label += Math.abs(i) + 'h';
-        option = $('<option />').attr('value', i*60*60*1000).text(label);
-        if(i == tzoffset) {
-            option.attr('selected', 'selected');
-        }
-        options.append(option);
+        options.append($('<option />').attr('value', i*60*60*1000).text(label));
     }
-
-    // Add dhtml calendars to the date input fields
-    /*
-    $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
-    $(":date[name=startTime]").data("dateinput").change(function() {
-        $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
-    });
-    $(":date[name=endTime]").data("dateinput").change(function() {
-        $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
-    });
-    */
-
 
     this.charts = [];
 
-    var self = this;
-
     // Update the time ranges and redraw charts when the form is submitted
-    this.ui.bind('submit', function(e) {
+    this.ui.find('[name="action"]').bind('click', function(e) {
         self.update();
-        return false;
-    });
-
-    // Reset all the charts to the default time range when the reset button is
-    // pressed.
-    this.ui.bind('reset', function(e) {
-        self.reset();
         return false;
     });
 
@@ -703,18 +682,32 @@ jarmon.ChartCoordinator = function(ui) {
     });
 };
 
+
 jarmon.ChartCoordinator.prototype.update = function() {
     /**
      * Grab the start and end time from the ui form, highlight the range on the
      * range timeline and set the time range of all the charts and redraw.
      **/
-    var fromOffset = parseInt(this.ui[0].from.value);
-    var startTime = new Date(new Date().getTime() + fromOffset);
 
-    var toOffset = parseInt(this.ui[0].to.value);
-    var endTime = new Date(new Date().getTime() + toOffset);
+    var selection = this.ui.find('[name="from_standard"]').val();
 
+    var now = new Date().getTime();
+    for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
+        if(jarmon.timeRangeShortcuts[i][0] == selection) {
+            range = jarmon.timeRangeShortcuts[i][1](now);
+            this.setTimeRange(range[0], range[1]);
+            break;
+        }
+    }
+
+    var startTime = parseInt(this.ui.find('[name="from"]').val());
+    var endTime = parseInt(this.ui.find('[name="to"]').val());
     var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val());
+
+    this.ui.find('[name="from_custom"]').val(
+        new Date(startTime + tzoffset).toUTCString().split(' ').slice(1,5).join(' '));
+    this.ui.find('[name="to_custom"]').val(
+        new Date(endTime + tzoffset).toUTCString().split(' ').slice(1,5).join(' '));
 
     this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
 
@@ -726,7 +719,6 @@ jarmon.ChartCoordinator.prototype.update = function() {
             chartsLoading.push(
                 this.charts[i].setTimeRange(startTime, endTime));
         }
-
     }
     return MochiKit.Async.gatherResults(chartsLoading).addCallback(
         function(self, startTime, endTime, chartData) {
@@ -746,8 +738,8 @@ jarmon.ChartCoordinator.prototype.update = function() {
 
             var ranges = {
                 xaxis: {
-                    from: Math.max(startTime.getTime(), firstUpdate),
-                    to: Math.min(endTime.getTime(), lastUpdate)
+                    from: Math.max(startTime, firstUpdate),
+                    to: Math.min(endTime, lastUpdate)
                 }
             };
 
@@ -782,23 +774,27 @@ jarmon.ChartCoordinator.prototype.update = function() {
         }, this, startTime, endTime);
 };
 
-jarmon.ChartCoordinator.prototype.setTimeRange = function(startTime, endTime) {
+jarmon.ChartCoordinator.prototype.setTimeRange = function(from, to) {
     /**
      * Set the start and end time fields in the form and trigger an update
      *
      * @param startTime: The start time I{Date}
      * @param endTime: The end time I{Date}
      **/
-    //this.ui[0].startTime.value = startTime.toString().split(' ').slice(1,5).join(' ');
-    //this.ui[0].endTime.value = endTime.toString().split(' ').slice(1,5).join(' ');
-    return this.update();
+
+    this.ui.find('[name="from"]').val(from);
+    this.ui.find('[name="to"]').val(to);
 };
 
-jarmon.ChartCoordinator.prototype.reset = function() {
+jarmon.ChartCoordinator.prototype.init = function() {
     /**
      * Reset all charts and the input form to the default time range - last hour
      **/
-    return this.setTimeRange(new Date(new Date().getTime()-2*60*60*1000),
-                             new Date());
+    // Default timezone offset based on localtime
+    var tzoffset = -1 * new Date().getTimezoneOffset() * 60 * 1000;
+    this.ui.find('[name="tzoffset"]').val(tzoffset);
+
+    // Default to 1 hour
+    this.ui.find('[name="from_standard"]').val('last hour');
 };
 

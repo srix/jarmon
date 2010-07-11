@@ -112,10 +112,20 @@
             });
 
             // Initialise all the charts
-            cc.reset();
+            cc.init();
         }
 
         $(function() {
+    // Add dhtml calendars to the date input fields
+    /*
+    $(":date").dateinput({format: 'mmm dd yyyy', max: +1});
+    $(":date[name=startTime]").data("dateinput").change(function() {
+        $(":date[name=endTime]").data("dateinput").setMin(this.getValue(), true);
+    });
+    $(":date[name=endTime]").data("dateinput").change(function() {
+        $(":date[name=startTime]").data("dateinput").setMax(this.getValue(), true);
+    });
+    */
             // Setup dhtml tabs
             $(".css-tabs").tabs(".css-panes > div", {history: true});
 
@@ -127,18 +137,27 @@
 
             // A static json file containing a list of rrd urls
             $.getJSON('rrd_list.json', initialiseCharts);
+
         });
         </script>
     </head>
 
     <body>
-        <form method="GET" class="chartRangeControl">
+        <form class="chartRangeControl">
             <div>
-                <label><select name="from"></select></label>
-                <input type="hidden" name="to" value="0" />
-                <label><img src="assets/icons/calendar.png" alt="calendar" align="center" /> </label>
-                <label><select name="tzoffset"></select></label>
-                <input type="submit" value="Update" />
+                <span class="timerange_control custom">
+                    <input name="from_custom" type="date"  />
+                    <input name="to_custom" type="date"  />
+                </span>
+                <span class="timerange_control standard">
+                    <select name="from_standard">
+                        <option>custom</option>
+                    </select>
+                </span>
+                <input name="from" type="hidden"  />
+                <input name="to" type="hidden"  />
+                <select name="tzoffset"></select>
+                <input name="action" value="Update" type="button" />
             </div>
             <div class="range-preview"></div>
         </form>
