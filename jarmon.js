@@ -623,6 +623,24 @@ jarmon.timeRangeShortcuts = [
 jarmon.ChartCoordinator = function(ui) {
     var self = this;
     this.ui = ui;
+    this.charts = [];
+
+    // Style and configuration of the range timeline
+    this.rangePreviewOptions = {
+        grid: {
+            borderWidth: 1
+        },
+        selection: {
+            mode: 'x'
+        },
+        xaxis: {
+            mode: 'time',
+            tickFormatter: jarmon.localTimeFormatter
+        },
+        yaxis: {
+            ticks: []
+        }
+    };
 
     var options = this.ui.find('select[name="from_standard"]');
     for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
@@ -650,30 +668,15 @@ jarmon.ChartCoordinator = function(ui) {
         options.append($('<option />').attr('value', i*60*60*1000).text(label));
     }
 
-    this.charts = [];
+    options.bind('change', function(e) {
+        self.update();
+    });
 
     // Update the time ranges and redraw charts when the form is submitted
     this.ui.find('[name="action"]').bind('click', function(e) {
         self.update();
         return false;
     });
-
-    // Style and configuration of the range timeline
-    this.rangePreviewOptions = {
-        grid: {
-            borderWidth: 1
-        },
-        selection: {
-            mode: 'x'
-        },
-        xaxis: {
-            mode: 'time',
-            tickFormatter: jarmon.localTimeFormatter
-        },
-        yaxis: {
-            ticks: []
-        }
-    };
 
     // When a selection is made on the range timeline, or any of my charts
     // redraw all the charts.
