@@ -675,29 +675,33 @@ jarmon.ChartCoordinator = function(ui) {
             self.update();
         }
     );
-    // Populate a list of tzoffset options
-    var label, val;
+    // Populate a list of tzoffset options if the element is present in the
+    // template as a select list
+
     options = this.ui.find('select[name="tzoffset"]');
-    for(var i=-12; i<=12; i++) {
-        label = 'UTC';
-        val = i;
-        if(val >= 0) {
-            label += ' + ';
-        } else {
-            label += ' - ';
+    if(options.length == 1) {
+        console.log(options);
+        var label, val;
+        for(var i=-12; i<=12; i++) {
+            label = 'UTC';
+            val = i;
+            if(val >= 0) {
+                label += ' + ';
+            } else {
+                label += ' - ';
+            }
+            val = Math.abs(val).toString();
+            if(val.length == 1) {
+                label += '0';
+            }
+            label += val + '00';
+            options.append($('<option />').attr('value', i*60*60*1000).text(label));
         }
-        val = Math.abs(val).toString();
-        if(val.length == 1) {
-            label += '0';
-        }
-        label += val + '00';
-        options.append($('<option />').attr('value', i*60*60*1000).text(label));
+
+        options.bind('change', function(e) {
+            self.update();
+        });
     }
-
-    options.bind('change', function(e) {
-        self.update();
-    });
-
     // Update the time ranges and redraw charts when the form is submitted
     this.ui.find('[name="action"]').bind('click', function(e) {
         self.update();
