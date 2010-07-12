@@ -476,7 +476,9 @@ jarmon.Chart.prototype.draw = function() {
                     $.plot(self.template, data, self.options);
 
                     // Highlight any disabled data sources in the legend
-                    self.template.find('.legendLabel').each(
+                    self.template.find('.legendLabel')
+                        .attr('title', 'Data series switch - click to turn this data series on or off')
+                        .each(
                         function(i, el) {
                             var labelCell = $(el);
                             if( $.inArray(labelCell.text(), disabled) > -1 ) {
@@ -680,7 +682,6 @@ jarmon.ChartCoordinator = function(ui) {
 
     options = this.ui.find('select[name="tzoffset"]');
     if(options.length == 1) {
-        console.log(options);
         var label, val;
         for(var i=-12; i<=12; i++) {
             label = 'UTC';

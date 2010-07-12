@@ -153,20 +153,26 @@
             <form>
                 <div>
                     <span class="timerange_control custom">
-                        <input name="from_custom" type="text"  />
-                        <input name="to_custom" type="text"  />
+                        <input name="from_custom" type="text"
+                               title="Time range start - click to choose a custom start time" />
+                        <input name="to_custom" type="text"
+                               title="Time range end - click to choose a custom end time" />
                     </span>
                     <span class="timerange_control standard">
-                        <select name="from_standard">
+                        <select name="from_standard"
+                                title="Time range shortcuts - click to select an alternative time range" >
                             <option>custom</option>
                         </select>
                     </span>
                     <input name="from" type="hidden"  />
                     <input name="to" type="hidden"  />
-                    <select name="tzoffset" ></select>
-                    <input name="action" value="Update" type="button" />
+                    <select name="tzoffset"
+                            title="Timezone offset - click to choose a custom timezone offset" ></select>
+                    <input name="action" value="Update" type="button"
+                           title="Graph update - click to update all graphs" />
                 </div>
-                <div class="range-preview"></div>
+                <div class="range-preview"
+                     title="Time range preview - click and drag to select a custom timerange" ></div>
             </form>
             <ul class="css-tabs">
                 <li><a href="#system">System</a></li>
