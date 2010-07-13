@@ -33,7 +33,7 @@
                     ['tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
                     ['tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
                 ],
-                options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
+                options: jQuery.extend(true, {yaxis: {tickDecimals: 0}}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
             },
         ];
 
