@@ -60,6 +60,46 @@ jarmon.downloadBinary = function(url) {
     return d;
 };
 
+/**
+ * Limit the number of parallel async calls
+ *
+ * @param limit: The maximum number of in progress calls
+ **/
+jarmon.Parallimiter = function(limit) {
+    this.limit = limit || 1;
+    this._callQueue = [];
+    this._currentCallCount = 0;
+};
+
+jarmon.Parallimiter.prototype.addCallable = function(callable) {
+    /**
+    * Add a function to be called when the number of in progress calls drops
+    * below the configured limit
+    *
+    * @param callable: A function which returns a Deferred.
+    **/
+    var d = new MochiKit.Async.Deferred();
+    this._callQueue.unshift([callable, d]);
+    this._nextCall();
+    return d;
+};
+
+jarmon.Parallimiter.prototype._nextCall = function() {
+    if(this._callQueue.length > 0) {
+        if(this._currentCallCount < this.limit) {
+            this._currentCallCount++;
+            var nextCall = this._callQueue.pop();
+            nextCall[0].call().addBoth(
+                function(self, d, res) {
+                    d.callback(res);
+                    self._currentCallCount--;
+                    self._nextCall();
+                }, this, nextCall[1]);
+        }
+    }
+};
+
+
 jarmon.localTimeFormatter = function (v, axis) {
     /**
      * Copied from jquery.flot.js and modified to allow timezone
@@ -220,9 +260,10 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
  * @param url: The url I{String} of a remote RRD file
  * @param unit: The unit suffix I{String} of this data eg 'bit/sec'
  **/
-jarmon.RrdQueryRemote = function(url, unit) {
+jarmon.RrdQueryRemote = function(url, unit, downloader) {
     this.url = url;
     this.unit = unit;
+    this.downloader = downloader;
     this.lastUpdate = 0;
     this._download = null;
 };
@@ -243,7 +284,7 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     // end time.
     // Don't start another download if one is already in progress.
     if(!this._download || (this._download.fired > -1 && this.lastUpdate < endTimestamp )) {
-        this._download = jarmon.downloadBinary(this.url)
+        this._download = this.downloader(this.url)
                 .addCallback(
                     function(self, binary) {
                         // Upon successful download convert the resulting binary
@@ -515,7 +556,7 @@ jarmon.Chart.prototype.draw = function() {
 };
 
 
-jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
+jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory, downloader) {
     /**
      * A factory function to generate a list of I{Chart} from a list of recipes
      * and a list of available rrd files in collectd path format.
@@ -549,7 +590,7 @@ jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory) {
             for(x=0; x<match.length; x++) {
 
                 if(typeof dataDict[match[x]] == 'undefined') {
-                    dataDict[match[x]] = new jarmon.RrdQueryRemote(match[x], unit);
+                    dataDict[match[x]] = new jarmon.RrdQueryRemote(match[x], unit, downloader);
                 }
                 chartData.push([label, new jarmon.RrdQueryDsProxy(dataDict[match[x]], ds)]);
             }

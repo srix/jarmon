@@ -43,6 +43,14 @@
              * Setup chart date range controls and all charts
              **/
 
+            var p = new jarmon.Parallimiter(1);
+            function serialDownloader(url) {
+                return p.addCallable(
+                    function() {
+                        return jarmon.downloadBinary(url);
+                    });
+            }
+
             // Extract the chart template from the page
             var chartTemplate = $('.chart-container').remove();
 
@@ -71,19 +79,19 @@
                         jarmon.COLLECTD_RECIPES.cpu,
                         jarmon.COLLECTD_RECIPES.memory,
                         jarmon.COLLECTD_RECIPES.load),
-                    templateFactory('.system-charts')),
+                    templateFactory('.system-charts'), serialDownloader),
                 jarmon.Chart.fromRecipe(
                     rrdUrlList,
                     jarmon.COLLECTD_RECIPES.interface,
-                    templateFactory('.network-charts')),
+                    templateFactory('.network-charts'), serialDownloader),
                 jarmon.Chart.fromRecipe(
                     rrdUrlList,
                     jarmon.COLLECTD_RECIPES.dns,
-                    templateFactory('.dns-charts')),
+                    templateFactory('.dns-charts'), serialDownloader),
                 jarmon.Chart.fromRecipe(
                     rrdUrlList,
                     application_recipes,
-                    templateFactory('.application-charts'))
+                    templateFactory('.application-charts'), serialDownloader)
             );
 
             // Show a loading icon when a chart is being redrawn
