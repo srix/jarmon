@@ -362,12 +362,19 @@ jarmon.Chart = function(template, options) {
             }
         }
 
+        if(self.options.yaxis.tickDecimals != null) {
+            decimalPlaces = self.options.yaxis.tickDecimals;
+        }
+
         var tickMin = minVal - minVal % stepSize;
         var tickMax = maxVal - maxVal % stepSize + stepSize
 
         var ticks = [];
         for(var j=tickMin; j<=tickMax; j+=stepSize) {
-            ticks.push([j*Math.pow(1000, si), j.toFixed(decimalPlaces)]);
+            ticks.push([
+                j*Math.pow(1000, si),
+                j.toFixed(decimalPlaces)
+            ]);
         }
 
         self.siPrefix = siPrefixes[si];
@@ -652,6 +659,11 @@ jarmon.ChartCoordinator = function(ui) {
         options.append($('<option />').text(jarmon.timeRangeShortcuts[i][0]));
     }
 
+    // Append a custom option for when the user selects an area of the graph
+    options.append($('<option />').text('custom'));
+    // Select the first shortcut by default
+    options.val(jarmon.timeRangeShortcuts[0][0]);
+
     options.bind('change', function(e) {
         // No point in updating if the user chose custom.
         if($(this).val() != 'custom') {
@@ -669,6 +681,7 @@ jarmon.ChartCoordinator = function(ui) {
             self.update();
         }
     );
+
     this.ui.find('[name="to_custom"]').bind('change',
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
@@ -677,11 +690,11 @@ jarmon.ChartCoordinator = function(ui) {
             self.update();
         }
     );
+
     // Populate a list of tzoffset options if the element is present in the
     // template as a select list
-
-    options = this.ui.find('select[name="tzoffset"]');
-    if(options.length == 1) {
+    tzoffsetEl = this.ui.find('[name="tzoffset"]');
+    if(tzoffsetEl.is('select')) {
         var label, val;
         for(var i=-12; i<=12; i++) {
             label = 'UTC';
@@ -696,13 +709,21 @@ jarmon.ChartCoordinator = function(ui) {
                 label += '0';
             }
             label += val + '00';
-            options.append($('<option />').attr('value', i*60*60*1000).text(label));
+            tzoffsetEl.append($('<option />').attr('value', i*60*60*1000).text(label));
         }
 
-        options.bind('change', function(e) {
+        tzoffsetEl.bind('change', function(e) {
             self.update();
         });
     }
+
+    // Don't set a default tzoffset if one has already been added to the form
+    if(tzoffsetEl.val() === '') {
+        // Default timezone offset based on localtime
+        var tzoffset = -1 * new Date().getTimezoneOffset() * 60 * 1000;
+        tzoffsetEl.val(tzoffset);
+    }
+
     // Update the time ranges and redraw charts when the form is submitted
     this.ui.find('[name="action"]').bind('click', function(e) {
         self.update();
@@ -829,12 +850,6 @@ jarmon.ChartCoordinator.prototype.init = function() {
     /**
      * Reset all charts and the input form to the default time range - last hour
      **/
-    // Default timezone offset based on localtime
-    var tzoffset = -1 * new Date().getTimezoneOffset() * 60 * 1000;
-    this.ui.find('[name="tzoffset"]').val(tzoffset);
-
-    // Default to 1 hour
-    this.ui.find('[name="from_standard"]').val('last 3 hours');
     this.update();
 };
 
