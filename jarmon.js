@@ -717,12 +717,9 @@ jarmon.ChartCoordinator = function(ui) {
         });
     }
 
-    // Don't set a default tzoffset if one has already been added to the form
-    if(tzoffsetEl.val() === '') {
-        // Default timezone offset based on localtime
-        var tzoffset = -1 * new Date().getTimezoneOffset() * 60 * 1000;
-        tzoffsetEl.val(tzoffset);
-    }
+    // Default timezone offset based on localtime
+    var tzoffset = -1 * new Date().getTimezoneOffset() * 60 * 1000;
+    tzoffsetEl.val(tzoffset);
 
     // Update the time ranges and redraw charts when the form is submitted
     this.ui.find('[name="action"]').bind('click', function(e) {

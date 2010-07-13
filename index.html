@@ -100,40 +100,80 @@
         }
 
         $(function() {
+            // Download a list of available rrd files and use it to generate
+            // any viable chart recipes
+            // A static json file containing a list of rrd urls
+            $.getJSON('rrd_list.json', initialiseCharts);
+
+            // Alternatively use a dynamically generated list of rrd urls
+            //$.getJSON('rrd_finder.rpy', initialiseCharts);
 
             // Add dhtml calendars to the date input fields
-            $(".timerange_control.custom input")
+            $(".timerange_control img")
                 .dateinput({
                     'format': 'dd mmm yyyy 00:00:00',
                     'max': +1,
                     'css': {'input': 'jquerytools_date'}})
                 .bind('onBeforeShow', function(e) {
-                    $(this).data('dateinput').setValue(new Date(this.value));
-                });
-            $(".timerange_control.custom input").bind('onHide',
-                function(e) {
-                    $(this).trigger('change');
+                    var classes = $(this).attr('class').split(' ');
+                    var currentDate, input_selector;
+                    for(var i=0; i<=classes.length; i++) {
+                        input_selector = '[name="' + classes[i] + '"]';
+                        // Look for a neighboring input element whose name matches the
+                        // class name of this calendar
+                        // Parse the value as a date if the returned date.getTime
+                        // returns NaN we know it's an invalid date
+                        // XXX: is there a better way to check for valid date?
+                        currentDate = new Date($(this).siblings(input_selector).val());
+                        if(currentDate.getTime() != NaN) {
+                            $(this).data('dateinput')._input_selector = input_selector;
+                            $(this).data('dateinput')._initial_val = currentDate.getTime();
+                            $(this).data('dateinput').setValue(currentDate);
+                            break;
+                        }
+                    }
+                })
+                .bind('onHide', function(e) {
+                    // Called after a calendar date has been chosen by the user.
+
+                    // Use the sibling selector that we generated above before opening
+                    // the calendar
+                    var input_selector = $(this).data('dateinput')._input_selector;
+                    var oldStamp = $(this).data('dateinput')._initial_val;
+                    var newDate = $(this).data('dateinput').getValue();
+                    // Only update the form field if the date has changed.
+                    if(oldStamp != newDate.getTime()) {
+                        $(this).siblings(input_selector).val(
+                            newDate.toString().split(' ').slice(1,5).join(' '));
+                        // Trigger a change event which should automatically update the
+                        // graphs and change the timerange drop down selector to
+                        // "custom"
+                        $(this).siblings(input_selector).trigger('change');
+                    }
                 });
 
-            $(":date[name=from_custom]").data("dateinput").change(function() {
-                $(":date[name=to_custom]").data("dateinput").setMin(this.getValue(), true);
-            });
-            $(":date[name=to_custom]").data("dateinput").change(function() {
-                $(":date[name=from_custom]").data("dateinput").setMax(this.getValue(), true);
-            });
+            // Avoid overlaps between the calendars
+            // XXX: This is a bit of hack, what if there's more than one set of calendar
+            // controls on a page?
+            $(".timerange_control img.from_custom").bind('onBeforeShow',
+                function() {
+                    var otherVal = new Date(
+                        $('.timerange_control [name="to_custom"]').val());
+
+                    $(this).data('dateinput').setMax(otherVal);
+                }
+            );
+            $(".timerange_control img.to_custom").bind('onBeforeShow',
+                function() {
+                    var otherVal = new Date(
+                        $('.timerange_control [name="from_custom"]').val());
+
+                    $(this).data('dateinput').setMin(otherVal);
+                }
+            );
 
             // Setup dhtml tabs
             $(".css-tabs").tabs(".css-panes > div", {history: true});
-
-            // Download a list of available rrd files and use it to generate
-            // any viable chart recipes
-
-            // Dynamically generated list of rrd urls
-            //$.getJSON('rrd_finder.rpy', initialiseCharts);
-
-            // A static json file containing a list of rrd urls
-            $.getJSON('rrd_list.json', initialiseCharts);
-
         });
         </script>
     </head>
@@ -143,10 +183,14 @@
             <form>
                 <div>
                     <span class="timerange_control custom">
-                        <input name="from_custom" type="text"
-                               title="Time range start - click to choose a custom start time" />
-                        <input name="to_custom" type="text"
-                               title="Time range end - click to choose a custom end time" />
+                        <img src="assets/icons/calendar.png" width="16" height="16" alt="calendar" class="from_custom"
+                             title="Click to choose a custom start date" />
+                        <input name="from_custom" type="text" readonly="readonly"
+                               title="Time range start" />
+                        <img src="assets/icons/calendar.png" width="16" height="16" alt="calendar" class="to_custom"
+                             title="Click to choose a custom end date" />
+                        <input name="to_custom" type="text" readonly="readonly"
+                               title="Time range end" />
                     </span>
                     <span class="timerange_control standard">
                         <select name="from_standard"
