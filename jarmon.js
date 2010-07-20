@@ -350,6 +350,7 @@ jarmon.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
 jarmon.Chart = function(template, options) {
     this.template = template;
     this.options = jQuery.extend(true, {yaxis: {}}, options);
+
     this.data = [];
 
     var self = this;
@@ -357,7 +358,7 @@ jarmon.Chart = function(template, options) {
 
     // Listen for clicks on the legend items - onclick enable / disable the
     // corresponding data source.
-    $('.legend .legendLabel', this.template[0]).live('click', function(e) {
+    $('.graph-legend .legendItem', this.template[0]).live('click', function(e) {
         self.switchDataEnabled($(this).text());
         self.draw();
     });
@@ -521,26 +522,38 @@ jarmon.Chart.prototype.draw = function() {
                         }
                     }
 
-                    $.plot(self.template, data, self.options);
+                    $.plot(self.template.find('.chart'), data, self.options);
 
-                    // Highlight any disabled data sources in the legend
-                    self.template.find('.legendLabel')
-                        .attr('title', 'Data series switch - click to turn this data series on or off')
-                        .each(
-                        function(i, el) {
-                            var labelCell = $(el);
-                            if( $.inArray(labelCell.text(), disabled) > -1 ) {
-                                labelCell.addClass('disabled');
-                            }
-                        }
-                    );
                     var yaxisUnitLabel = $('<div>').text(self.siPrefix + unit)
                                                    .css({width: '100px',
                                                          position: 'absolute',
                                                          top: '80px',
                                                          left: '-90px',
                                                          'text-align': 'right'});
-                    self.template.append(yaxisUnitLabel);
+                    self.template.find('.chart').append(yaxisUnitLabel);
+
+                    var legend = self.template.find('.graph-legend');
+                    legend.empty();
+                    self.template.find('.legendLabel')
+                        .each(function(i, el) {
+                            var orig = $(el);
+                            var label = orig.text();
+                            var newEl = $('<div />')
+                                .attr('class', 'legendItem')
+                                .attr('title', 'Data series switch - click to turn this data series on or off')
+                                .width(orig.width()+20)
+                                .text(label)
+                                .prepend(orig.prev().find('div div').clone().addClass('legendColorBox'))
+                                .appendTo(legend);
+
+                            if( $.inArray(label, disabled) > -1 ) {
+                                newEl.addClass('disabled');
+                            }
+                        })
+                        .remove();
+                    legend.append($('<div />').css('clear', 'both'));
+                    self.template.find('.legend').remove();
+
                     yaxisUnitLabel.position(self.template.position());
                     return data;
                 }, this)
@@ -598,7 +611,7 @@ jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory, downloa
         if(chartData.length > 0) {
             template = templateFactory();
             template.find('.title').text(recipe['title']);
-            c = new jarmon.Chart(template.find('.chart'), recipe['options']);
+            c = new jarmon.Chart(template, recipe['options']);
             for(j=0; j<chartData.length; j++) {
                 c.addData.apply(c, chartData[j]);
             }
@@ -621,7 +634,7 @@ jarmon.Chart.BASE_OPTIONS = {
     },
     legend: {
         position: 'nw',
-        noColumns: 2
+        noColumns: 1
     },
     selection: {
         mode: 'x'
@@ -817,6 +830,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
     }
     return MochiKit.Async.gatherResults(chartsLoading).addCallback(
         function(self, startTime, endTime, chartData) {
+
             var firstUpdate = new Date().getTime();
             var lastUpdate = 0;
 
@@ -866,6 +880,9 @@ jarmon.ChartCoordinator.prototype.update = function() {
                                        self.rangePreviewOptions);
 
             self.rangePreview.setSelection(ranges, true);
+            for(var i=0; i<=self.charts.length; i++) {
+                self.charts[i].template.find('')
+            }
         }, this, startTime, endTime);
 };
 

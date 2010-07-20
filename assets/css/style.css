@@ -13,6 +13,11 @@ h2 {
     margin: 20px auto 5px auto;
     font-size: 14px;
     text-align: left;
+    clear: both;
+}
+
+p, li, dt, dd, td, th, div {
+    font-size: 12px;
 }
 
 .loading {
@@ -33,20 +38,35 @@ h2 {
     margin: 0 auto 0 auto;
 }
 
-.chart canvas {
-}
-
 .tickLabel {
     width:50px;
     overflow:hidden;
 }
 
-.legendLabel {
-    cursor: pointer;
+.graph-legend {
+    width: 790px;
+    padding: 5px 0 5px 0;
+    margin: 10px auto 0 auto;
+    background-color: #f7f7f7;
+    position: relative;
+    left: 25px;
 }
 
-.legend .disabled {
+.graph-legend .legendItem {
+    float: left;
+    cursor: pointer;
+    margin-right: 20px;
+    margin-top: 5px;
+    margin-left: 5px;
+}
+
+.graph-legend .disabled {
     text-decoration: line-through;
+}
+
+.graph-legend .legendColorBox {
+    float: left;
+    margin-right: 5px;
 }
 
 input[type=checkbox] {
