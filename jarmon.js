@@ -880,9 +880,6 @@ jarmon.ChartCoordinator.prototype.update = function() {
                                        self.rangePreviewOptions);
 
             self.rangePreview.setSelection(ranges, true);
-            for(var i=0; i<=self.charts.length; i++) {
-                self.charts[i].template.find('')
-            }
         }, this, startTime, endTime);
 };
 
