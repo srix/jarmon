@@ -532,6 +532,15 @@ jarmon.Chart.prototype.draw = function() {
                                                          'text-align': 'right'});
                     self.template.find('.chart').append(yaxisUnitLabel);
 
+                    // Manipulate and move the flot generated legend to an
+                    // alternative position.
+                    // The default legend is formatted as an HTML table, so we
+                    // grab the contents of the cells and turn them into
+                    // divs.
+                    // Actually, formatting the legend first as a one column
+                    // table is useful as it generates an optimum label element
+                    // width which we can copy to the new divs + a little extra
+                    // to accomodate the color box
                     var legend = self.template.find('.graph-legend');
                     legend.empty();
                     self.template.find('.legendLabel')
@@ -545,7 +554,9 @@ jarmon.Chart.prototype.draw = function() {
                                 .text(label)
                                 .prepend(orig.prev().find('div div').clone().addClass('legendColorBox'))
                                 .appendTo(legend);
-
+                            // The legend label is clickable - to enable /
+                            // disable different data series. The disabled class
+                            // results in a label formatted with strike though
                             if( $.inArray(label, disabled) > -1 ) {
                                 newEl.addClass('disabled');
                             }
