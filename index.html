@@ -95,15 +95,6 @@
                     templateFactory('.application-charts'), serialDownloader)
             );
 
-            // Show a loading icon when a chart is being redrawn
-            $('.chart-container').live('chart_loading', function(e) {
-                $(this).find('.title').addClass('loading');
-            });
-
-            $('.chart-container').live('chart_loaded', function(e) {
-                $(this).find('.title').removeClass('loading');
-            });
-
             // Initialise all the charts
             cc.init();
         }

@@ -20,7 +20,7 @@ p, li, dt, dd, td, th, div {
     font-size: 12px;
 }
 
-.loading {
+.loading .title {
     background-repeat: no-repeat;
     background-position: 0 50%;
     background-image: url(/assets/icons/loading.gif);

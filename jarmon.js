@@ -477,7 +477,8 @@ jarmon.Chart.prototype.draw = function() {
      * @return: A I{MochiKit.Async.Deferred} which calls back with the chart
      *          data when the chart has been rendered.
      **/
-    this.template.trigger('chart_loading');
+    this.template.addClass('loading');
+
     var result;
     var results = [];
     for(var i=0; i<this.data.length; i++) {
@@ -574,7 +575,7 @@ jarmon.Chart.prototype.draw = function() {
                 }, this)
             .addBoth(
                 function(self, res) {
-                    self.template.trigger('chart_loaded');
+                    self.template.removeClass('loading');
                     return res;
                 }, this);
 };
