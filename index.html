@@ -44,12 +44,9 @@
              * Setup chart date range controls and all charts
              **/
 
-            var p = new jarmon.Parallimiter(1);
+            var p = new jarmon.Parallimiter(2);
             function serialDownloader(url) {
-                return p.addCallable(
-                    function() {
-                        return jarmon.downloadBinary(url);
-                    });
+                return p.addCallable(jarmon.downloadBinary, [url]);
             }
 
             // Extract the chart template from the page

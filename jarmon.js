@@ -29,6 +29,7 @@ jarmon.downloadBinary = function(url) {
     var d = new MochiKit.Async.Deferred();
 
     $.ajax({
+        _deferredResult: d,
         url: url,
         dataType: 'text',
         cache: false,
@@ -41,9 +42,9 @@ jarmon.downloadBinary = function(url) {
         },
         success: function(data) {
             try {
-                d.callback(new BinaryFile(data));
+                this._deferredResult.callback(new BinaryFile(data));
             } catch(e) {
-                d.errback(e);
+                this._deferredResult.errback(e);
             }
         },
         error: function(xhr, textStatus, errorThrown) {
@@ -54,7 +55,7 @@ jarmon.downloadBinary = function(url) {
                     return this.success(xhr.responseBody);
                 }
             }
-            d.errback(new Error(xhr.status));
+            this._deferredResult.errback(new Error(xhr.status));
         }
     });
     return d;
@@ -71,7 +72,7 @@ jarmon.Parallimiter = function(limit) {
     this._currentCallCount = 0;
 };
 
-jarmon.Parallimiter.prototype.addCallable = function(callable) {
+jarmon.Parallimiter.prototype.addCallable = function(callable, args) {
     /**
     * Add a function to be called when the number of in progress calls drops
     * below the configured limit
@@ -79,7 +80,7 @@ jarmon.Parallimiter.prototype.addCallable = function(callable) {
     * @param callable: A function which returns a Deferred.
     **/
     var d = new MochiKit.Async.Deferred();
-    this._callQueue.unshift([callable, d]);
+    this._callQueue.unshift([d, callable, args]);
     this._nextCall();
     return d;
 };
@@ -89,12 +90,12 @@ jarmon.Parallimiter.prototype._nextCall = function() {
         if(this._currentCallCount < this.limit) {
             this._currentCallCount++;
             var nextCall = this._callQueue.pop();
-            nextCall[0].call().addBoth(
+            nextCall[1].apply(null, nextCall[2]).addBoth(
                 function(self, d, res) {
                     d.callback(res);
                     self._currentCallCount--;
                     self._nextCall();
-                }, this, nextCall[1]);
+                }, this, nextCall[0]);
         }
     }
 };
