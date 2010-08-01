@@ -582,7 +582,7 @@ jarmon.Chart.prototype.draw = function() {
 };
 
 
-jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory, downloader) {
+jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
     /**
      * A factory function to generate a list of I{Chart} from a list of recipes
      * and a list of available rrd files in collectd path format.
@@ -592,12 +592,11 @@ jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory, downloa
      * @param templateFactory: A callable which generates an html template for a
      *      chart.
      **/
-    var rrdUrlBlob = rrdUrlList.join('\n')
 
     var charts = [];
     var dataDict = {};
 
-    var recipe, chartData, template, c, i, j, x, ds, label, rrd, unit, re, match;
+    var recipe, chartData, template, c, i, j, ds, label, rrd, unit, re, match;
 
     for(i=0; i<recipes.length; i++) {
         recipe = recipes[i];
@@ -608,18 +607,10 @@ jarmon.Chart.fromRecipe = function(rrdUrlList, recipes, templateFactory, downloa
             ds = recipe['data'][j][1];
             label = recipe['data'][j][2];
             unit = recipe['data'][j][3];
-            re = new RegExp('.*/' + rrd, 'gm');
-            match = rrdUrlBlob.match(re);
-            if(!match) {
-                continue;
+            if(typeof dataDict[rrd] == 'undefined') {
+                dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, downloader);
             }
-            for(x=0; x<match.length; x++) {
-
-                if(typeof dataDict[match[x]] == 'undefined') {
-                    dataDict[match[x]] = new jarmon.RrdQueryRemote(match[x], unit, downloader);
-                }
-                chartData.push([label, new jarmon.RrdQueryDsProxy(dataDict[match[x]], ds)]);
-            }
+            chartData.push([label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds)]);
         }
         if(chartData.length > 0) {
             template = templateFactory();

@@ -22,29 +22,29 @@
             {
                 title: 'Jarmon Webserver TCP Stats',
                 data: [
-                    ['tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
-                    ['tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
-                    ['tcpconns-8080-local/tcp_connections-TIME_WAIT.rrd', 0, 'TIME_WAIT', ''],
-                    ['tcpconns-8080-local/tcp_connections-CLOSED.rrd', 0, 'CLOSED', ''],
-                    ['tcpconns-8080-local/tcp_connections-FIN_WAIT2.rrd', 0, 'FIN_WAIT2', ''],
-                    ['tcpconns-8080-local/tcp_connections-FIN_WAIT1.rrd', 0, 'FIN_WAIT1', ''],
-                    ['tcpconns-8080-local/tcp_connections-ESTABLISHED.rrd', 0, 'ESTABLISHED', ''],
-                    ['tcpconns-8080-local/tcp_connections-LAST_ACK.rrd', 0, 'LAST_ACK', ''],
-                    ['tcpconns-8080-local/tcp_connections-LISTEN.rrd', 0, 'LISTEN', ''],
-                    ['tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
-                    ['tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
+                    ['data/tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-TIME_WAIT.rrd', 0, 'TIME_WAIT', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-CLOSED.rrd', 0, 'CLOSED', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT2.rrd', 0, 'FIN_WAIT2', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT1.rrd', 0, 'FIN_WAIT1', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-ESTABLISHED.rrd', 0, 'ESTABLISHED', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-LAST_ACK.rrd', 0, 'LAST_ACK', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-LISTEN.rrd', 0, 'LISTEN', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
+                    ['data/tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
                 ],
                 options: jQuery.extend(true, {yaxis: {tickDecimals: 0}}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
-            },
+            }
         ];
 
 
-        function initialiseCharts(rrdUrlList) {
+        function initialiseCharts() {
             /**
              * Setup chart date range controls and all charts
              **/
 
-            var p = new jarmon.Parallimiter(2);
+            var p = new jarmon.Parallimiter(1);
             function serialDownloader(url) {
                 return p.addCallable(jarmon.downloadBinary, [url]);
             }
@@ -72,22 +72,18 @@
 
             cc.charts = [].concat(
                 jarmon.Chart.fromRecipe(
-                    rrdUrlList,
                     [].concat(
                         jarmon.COLLECTD_RECIPES.cpu,
                         jarmon.COLLECTD_RECIPES.memory,
                         jarmon.COLLECTD_RECIPES.load),
                     templateFactory('.system-charts'), serialDownloader),
                 jarmon.Chart.fromRecipe(
-                    rrdUrlList,
                     jarmon.COLLECTD_RECIPES.interface,
                     templateFactory('.network-charts'), serialDownloader),
                 jarmon.Chart.fromRecipe(
-                    rrdUrlList,
                     jarmon.COLLECTD_RECIPES.dns,
                     templateFactory('.dns-charts'), serialDownloader),
                 jarmon.Chart.fromRecipe(
-                    rrdUrlList,
                     application_recipes,
                     templateFactory('.application-charts'), serialDownloader)
             );
@@ -97,14 +93,6 @@
         }
 
         $(function() {
-            // Download a list of available rrd files and use it to generate
-            // any viable chart recipes
-            // A static json file containing a list of rrd urls
-            $.getJSON('rrd_list.json', initialiseCharts);
-
-            // Alternatively use a dynamically generated list of rrd urls
-            //$.getJSON('rrd_finder.rpy', initialiseCharts);
-
             // Add dhtml calendars to the date input fields
             $(".timerange_control img")
                 .dateinput({
@@ -171,6 +159,8 @@
 
             // Setup dhtml tabs
             $(".css-tabs").tabs(".css-panes > div", {history: true});
+
+            initialiseCharts();
         });
         </script>
     </head>
