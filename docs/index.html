@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+    <meta charset="utf-8">
+    <title>Jarmon Help File</title>
+
+    <h1>Jarmon User Guide</h1>
+    <p>Jarmon is a browser based graph rendering system.
+    <h2>Contents</h2>
+    <ol>
+        <li><a href="#browser-compatibility">Browser Compatibility</a></li>
+    </ol>
+    <h2 id="browser-compatibility">Browser Compatibility</h2>
+    <p>Jarmon depends upon the <a href="http://code.google.com/p/flot/">Flot
+    graphing library</a> which makes use of the
+    <a href="http://www.w3.org/TR/html5/the-canvas-element.html">HTML5 canvas
+    element</a>. The canvas element is only supported in certain web browsers.
+
+    <table>
+        <tr><th>Browser             <th>Minimum Supported Version
+        <tr><td>Firefox             <td>3.0
+        <tr><td>Safari              <td>3.2
+        <tr><td>Chrome              <td>3.0
+        <tr><td>Opera               <td>10.1
+        <tr><td>Internet Explorer   <td>6 (see caveats below)
+    </table>
+
+    <h3>Internet Explorer Caveats</h3>
+    <dl>
+        <dt>Internet Explorer (&lt;= IE8)
+        <dd>This version of IE does not have native support the HTML canvas (see
+        Internet Explorer workarounds below)
+        element.
+
+        <dt>Internet Explorer 9
+        <dd>Due to be released in late 2010 this new version of IE will provide
+        <a href="http://blogs.msdn.com/b/ie/archive/2010/06/23/html5-native-third-ie9-platform-preview-available-for-developers.aspx">
+        native canvas support</a> and will be able to render Jarmon graphs as
+        fast (if not faster) than other browsers.
+    </dl>
+
+    <h3>Internet Explorer Workarounds</h3>
+    <dl>
+        <dt>Excanvas
+        <dd>This is the default IE compatibility workaround. Jarmon bundles the
+        <a href="http://code.google.com/p/explorercanvas/">excanvas library</a>
+        which translates canvas api calls into VML, but this is much slower
+        than the native canvas support in other browsers. In the absense of
+        other workarounds, Jarmon will transparently use the excanvas library.
+
+        <dt>Chrome Frame
+        <dd><a href="http://code.google.com/chrome/chromeframe/">Chrome
+        Frame</a> is an IE plugin developed by Google. Once installed, it
+        replaces the standard IE rendering module with the more performant
+        Chrome rendering module.</dd>
+        <dd>When first visiting a Jarmon page using &lt;= IE8, you will be
+        prompted with an advisory message, explaining the performance penalty of
+        using the standard excanvas compatibility layer.
+        <dd>You will be asked whether you want to Install and use Chrome Frame.
+        You will be presented with the following options:
+            <dl>
+                <dt>Yes
+                <dd>After you choose this option the message will be hidden and
+                you will be guided through the steps necessary to install
+                Chrome Frame after which you can continue to use Jarmon
+                normally.</dd>
+                <dt>Remind me later
+                <dd>After you choose this option, the message will be hidden
+                and you can continue to use Jarmon.</dd>
+                <dd>Your preference will be saved in a cookie and the warning
+                message will not re-appear for 1 month.</dd>
+                <dt>Never
+                <dd>After you choose this option, the message will be hidden
+                and you can continue to use Jarmon.</dd>
+                <dd>Your preference will be saved in a cookie and the warning
+                message will never re-appear (unless the preference cookie is
+                deleted or expires).</dd>
+            </dl>
+    </dl>
+
