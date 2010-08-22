@@ -9,6 +9,7 @@ import shutil
 import sys
 
 from subprocess import check_call
+from tempfile import gettempdir
 from urllib2 import urlopen
 from zipfile import ZipFile
 
@@ -50,15 +51,16 @@ class BuildApidocsCommand(object):
 
         @param argv: The list of arguments passed to the build-apidocs command
         """
+        tmpdir = gettempdir()
         workingbranch_dir = os.path.join(os.path.dirname(__file__), '..')
 
         # setup working dir
-        tmpdir = os.path.join(workingbranch_dir, 'build')
-        if not os.path.isdir(tmpdir):
-            self.log('Creating working dir: %s' % (workingbranch_dir,))
-            os.mkdir(tmpdir)
+        build_dir = os.path.join(workingbranch_dir, 'build')
+        if not os.path.isdir(build_dir):
+            self.log('Creating working dir: %s' % (build_dir,))
+            os.mkdir(build_dir)
         else:
-            self.log('Using working dir: %s' % (workingbranch_dir,))
+            self.log('Using working dir: %s' % (build_dir,))
 
         # download and cache yuidoc
         yuizip_path = os.path.join(tmpdir, os.path.basename(YUIDOC_URL))
@@ -88,35 +90,32 @@ class BuildApidocsCommand(object):
         actual_md5 = checksum.hexdigest()
         if actual_md5 != YUIDOC_MD5:
             raise BuildError(
-                'YUI Doc checksum error. '
-                'Expected: %s, Got: %s' % (YUIDOC_MD5, actual_md5))
+                'YUI Doc checksum error. File: %s, '
+                'Expected: %s, Got: %s' % (yuizip_path, YUIDOC_MD5, actual_md5))
         else:
             self.log('YUI Doc checksum verified')
 
-        yuidoc_dir = os.path.join(tmpdir, 'yuidoc')
-        if os.path.isdir(yuidoc_dir):
-            self.log('Removing existing yuidoc dir: %s' % (yuidoc_dir,))
-            shutil.rmtree(yuidoc_dir)
+        # Remove any existing apidocs so that we can track removed files
+        shutil.rmtree(os.path.join(build_dir, 'docs', 'apidocs'), True)
+
+        yuidoc_dir = os.path.join(build_dir, 'yuidoc')
 
         # extract yuidoc folder from the downloaded zip file
+        self.log('Extracting YUI Doc from %s to %s' % (yuizip_path, yuidoc_dir))
         zip = ZipFile(yuizip_path)
-        self.log('Extracting YUI Doc')
         zip.extractall(
-            tmpdir, (m for m in zip.namelist() if m.startswith('yuidoc')))
-
-        # Remove any existing apidocs so that we can track removed files
-        shutil.rmtree(os.path.join(workingbranch_dir, 'docs', 'apidocs'))
+            build_dir, (m for m in zip.namelist() if m.startswith('yuidoc')))
 
         # Use the yuidoc script that we just extracted to generate new docs
         self.log('Running YUI Doc')
         check_call((
             sys.executable,
-            os.path.join(tmpdir, 'yuidoc', 'bin', 'yuidoc.py'),
+            os.path.join(yuidoc_dir, 'bin', 'yuidoc.py'),
             workingbranch_dir,
             '--parseroutdir=%s' % (
-                os.path.join(workingbranch_dir, 'docs', 'apidocs'),),
+                os.path.join(build_dir, 'docs', 'apidocs'),),
             '--outputdir=%s' % (
-                os.path.join(workingbranch_dir, 'docs', 'apidocs'),),
+                os.path.join(build_dir, 'docs', 'apidocs'),),
             '--template=%s' % (
                 os.path.join(
                     workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),),
@@ -124,3 +123,5 @@ class BuildApidocsCommand(object):
             '--project=%s' % (JARMON_PROJECT_TITLE,),
             '--projecturl=%s' % (JARMON_PROJECT_URL,)
         ))
+
+        shutil.rmtree(yuidoc_dir)
