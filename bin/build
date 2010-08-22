@@ -5,6 +5,6 @@ import sys
 # Add the current branch to the python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from jarmonbuild.commands import BuildApidocsCommand
+from jarmonbuild.commands import main
 
-raise SystemExit(BuildApidocsCommand().main())
+raise SystemExit(main())

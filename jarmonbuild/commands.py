@@ -9,13 +9,13 @@ import os
 import shutil
 import sys
 
+from optparse import OptionParser
 from subprocess import check_call
 from tempfile import gettempdir
 from urllib2 import urlopen
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 
-JARMON_VERSION='10.8'
 JARMON_PROJECT_TITLE='Jarmon'
 JARMON_PROJECT_URL='http://www.launchpad.net/jarmon'
 
@@ -31,7 +31,8 @@ class BuildError(Exception):
 
 
 class BuildCommand(object):
-    def __init__(self, log=None):
+    def __init__(self, buildversion, log=None):
+        self.buildversion = buildversion
         if log is not None:
             self.log = log
         else:
@@ -43,7 +44,7 @@ class BuildApidocsCommand(BuildCommand):
     Download YUI Doc and use it to generate apidocs for jarmon
     """
 
-    def main(self, argv=sys.argv):
+    def main(self, argv):
         """
         The main entry point for the build-apidocs command
 
@@ -115,7 +116,7 @@ class BuildApidocsCommand(BuildCommand):
             '--template=%s' % (
                 os.path.join(
                     workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),),
-            '--version=%s' % (JARMON_VERSION,),
+            '--version=%s' % (self.buildversion,),
             '--project=%s' % (JARMON_PROJECT_TITLE,),
             '--projecturl=%s' % (JARMON_PROJECT_URL,)
         ))
@@ -123,9 +124,15 @@ class BuildApidocsCommand(BuildCommand):
         shutil.rmtree(yuidoc_dir)
 
 
-class BuildSourceArchiveCommand(object):
-    def main(self, argv=sys.argv):
-        workingbranch_dir = os.path.join(os.path.dirname(__file__), '..')
+class BuildReleaseCommand(BuildCommand):
+    """
+    Export all source files, generate apidocs and create a zip archive for
+    upload to Launchpad.
+    """
+
+    def main(self, argv):
+        workingbranch_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..'))
 
         # setup working dir
         build_dir = os.path.join(workingbranch_dir, 'build')
@@ -136,4 +143,65 @@ class BuildSourceArchiveCommand(object):
         if status != 0:
             raise BuildError('bzr export failure. Status: %r' % (status,))
 
+        # Record the branch version
+        from bzrlib.branch import Branch
+        from bzrlib.version_info_formats.format_python import PythonVersionInfoBuilder
+        v = PythonVersionInfoBuilder(Branch.open(workingbranch_dir))
+        versionfile_path = os.path.join(build_dir, 'jarmonbuild', '_version.py')
+        with open(versionfile_path, 'w') as f:
+            v.generate(f)
+
         # Generate apidocs
+        BuildApidocsCommand(buildversion=self.buildversion).main(argv)
+
+        # Generate archive
+        archive_root = 'jarmon-%s' % (self.buildversion,)
+        prefix_len = len(build_dir) + 1
+        z = ZipFile('%s.zip' % (archive_root,), 'w', ZIP_DEFLATED)
+        try:
+            for root, dirs, files in os.walk(build_dir):
+                for file in files:
+                    z.write(
+                        os.path.join(root, file),
+                        os.path.join(archive_root, root[prefix_len:], file)
+                    )
+        finally:
+            z.close()
+
+
+# The available sub commands
+build_commands = {
+    'apidocs': BuildApidocsCommand,
+    'release': BuildReleaseCommand,
+}
+
+
+def main(argv=sys.argv[1:]):
+    """
+    The root build command which dispatches to various subcommands for eg
+    building apidocs and release zip files.
+    """
+
+    parser = OptionParser(usage='%prog [options] SUBCOMMAND [options]')
+    parser.add_option(
+        '-V', '--build-version', dest='buildversion', default='0',
+        metavar='BUILDVERSION', help='Specify the build version')
+    parser.add_option(
+        '-d', '--debug', action='store_true', default=False, dest='debug',
+        help='Print verbose debug log to stderr')
+
+    parser.disable_interspersed_args()
+
+    options, args = parser.parse_args(argv)
+
+    if len(args) < 1:
+        parser.error('Please specify a sub command. '
+                     'Available commands: %r' % (build_commands.keys()))
+
+    # First argument is the name of a subcommand
+    command_name = args.pop(0)
+    command_factory = build_commands.get(command_name)
+    if not command_factory:
+        parser.error('Unrecognised subcommand: %r' % (command_name,))
+
+    command_factory(buildversion=options.buildversion).main(argv=args)
