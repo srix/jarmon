@@ -10,7 +10,7 @@ import shutil
 import sys
 
 from optparse import OptionParser
-from subprocess import check_call
+from subprocess import check_call, PIPE
 from tempfile import gettempdir
 from urllib2 import urlopen
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -36,7 +36,20 @@ class BuildCommand(object):
         if log is not None:
             self.log = log
         else:
-            self.log = logging.getLogger()
+            self.log = logging.getLogger(
+                '%s.%s' % (__name__, self.__class__.__name__))
+
+        self.workingbranch_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..'))
+
+        # setup working dir
+        self.build_dir = os.path.join(self.workingbranch_dir, 'build')
+
+        if not os.path.isdir(self.build_dir):
+            self.log.debug('Creating build dir: %s' % (self.build_dir,))
+            os.mkdir(self.build_dir)
+        else:
+            self.log.debug('Using build dir: %s' % (self.build_dir,))
 
 
 class BuildApidocsCommand(BuildCommand):
@@ -51,15 +64,8 @@ class BuildApidocsCommand(BuildCommand):
         @param argv: The list of arguments passed to the build-apidocs command
         """
         tmpdir = gettempdir()
-        workingbranch_dir = os.path.join(os.path.dirname(__file__), '..')
-
-        # setup working dir
-        build_dir = os.path.join(workingbranch_dir, 'build')
-        if not os.path.isdir(build_dir):
-            self.log.debug('Creating working dir: %s' % (build_dir,))
-            os.mkdir(build_dir)
-        else:
-            self.log.debug('Using working dir: %s' % (build_dir,))
+        workingbranch_dir = self.workingbranch_dir
+        build_dir = self.build_dir
 
         # download and cache yuidoc
         yuizip_path = os.path.join(tmpdir, os.path.basename(YUIDOC_URL))
@@ -119,7 +125,7 @@ class BuildApidocsCommand(BuildCommand):
             '--version=%s' % (self.buildversion,),
             '--project=%s' % (JARMON_PROJECT_TITLE,),
             '--projecturl=%s' % (JARMON_PROJECT_URL,)
-        ))
+        ), stdout=PIPE, stderr=PIPE,)
 
         shutil.rmtree(yuidoc_dir)
 
@@ -131,19 +137,17 @@ class BuildReleaseCommand(BuildCommand):
     """
 
     def main(self, argv):
-        workingbranch_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '..'))
+        workingbranch_dir = self.workingbranch_dir
+        build_dir = self.build_dir
 
-        # setup working dir
-        build_dir = os.path.join(workingbranch_dir, 'build')
-
-        # Use bzr to export the versioned files to a build folder
+        self.log.debug('Export versioned files to a build folder')
         from bzrlib.commands import main as bzr_main
         status = bzr_main(['bzr', 'export', build_dir, workingbranch_dir])
         if status != 0:
             raise BuildError('bzr export failure. Status: %r' % (status,))
 
-        # Record the branch version
+
+        self.log.debug('Record the branch version')
         from bzrlib.branch import Branch
         from bzrlib.version_info_formats.format_python import PythonVersionInfoBuilder
         v = PythonVersionInfoBuilder(Branch.open(workingbranch_dir))
@@ -151,10 +155,12 @@ class BuildReleaseCommand(BuildCommand):
         with open(versionfile_path, 'w') as f:
             v.generate(f)
 
-        # Generate apidocs
+
+        self.log.debug('Generate apidocs')
         BuildApidocsCommand(buildversion=self.buildversion).main(argv)
 
-        # Generate archive
+
+        self.log.debug('Generate archive')
         archive_root = 'jarmon-%s' % (self.buildversion,)
         prefix_len = len(build_dir) + 1
         z = ZipFile('%s.zip' % (archive_root,), 'w', ZIP_DEFLATED)
@@ -181,7 +187,6 @@ def main(argv=sys.argv[1:]):
     The root build command which dispatches to various subcommands for eg
     building apidocs and release zip files.
     """
-
     parser = OptionParser(usage='%prog [options] SUBCOMMAND [options]')
     parser.add_option(
         '-V', '--build-version', dest='buildversion', default='0',
@@ -203,5 +208,22 @@ def main(argv=sys.argv[1:]):
     command_factory = build_commands.get(command_name)
     if not command_factory:
         parser.error('Unrecognised subcommand: %r' % (command_name,))
+
+    # Setup logging
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.INFO)
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    # create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    log.addHandler(ch)
+
+    if options.debug:
+        log.setLevel(logging.DEBUG)
+        ch.setLevel(logging.DEBUG)
 
     command_factory(buildversion=options.buildversion).main(argv=args)
