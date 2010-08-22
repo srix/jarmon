@@ -1,3 +1,8 @@
+# Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+"""
+Functions and Classes for automating the release of Jarmon
+"""
+
 import hashlib
 import os
 import shutil
@@ -11,18 +16,37 @@ from zipfile import ZipFile
 YUIDOC_URL = 'http://yuilibrary.com/downloads/yuidoc/yuidoc_1.0.0b1.zip'
 YUIDOC_MD5 = 'cd5545d2dec8f7afe3d18e793538162c'
 
+
 class BuildError(Exception):
+    """
+    A base Exception for errors in the build system
+    """
     pass
 
+
 class BuildApidocsCommand(object):
-    def __init__(self, stdout=sys.stdout, stderr=sys.stderr):
-        self.stdout = stdout
-        self.stderr = stderr
+    """
+    Download YUI Doc and use it to generate apidocs for jarmon
+    """
+
+    def __init__(self, _stdout=sys.stdout, _stderr=sys.stderr):
+        self.stdout = _stdout
+        self.stderr = _stderr
 
     def log(self, message, newline=os.linesep):
+        """
+        @param message: A message to be logged
+        @param newline: The newline string to be appended to the message. Use
+            '' to prevent a newline
+        """
         self.stderr.write(''.join((message, newline)))
 
-    def main(self, argv=sys.argv):
+    def main(self, argv=sys.argv[1:]):
+        """
+        The main entry point for the build-apidocs command
+
+        @param argv: The list of arguments passed to the build-apidocs command
+        """
         workingbranch_dir = os.path.join(os.path.dirname(__file__), '..')
 
         # setup working dir
@@ -66,6 +90,11 @@ class BuildApidocsCommand(object):
         else:
             self.log('YUI Doc checksum verified')
 
+        yuidoc_dir = os.path.join(tmpdir, 'yuidoc')
+        if os.path.isdir(yuidoc_dir):
+            self.log('Removing existing yuidoc dir: %s' % (yuidoc_dir,))
+            shutil.rmtree(yuidoc_dir)
+
         # extract yuidoc folder from the downloaded zip file
         zip = ZipFile(yuizip_path)
         self.log('Extracting YUI Doc')
@@ -90,6 +119,3 @@ class BuildApidocsCommand(object):
             '--project=Jarmon',
             '--projecturl=http://www.launchpad.net/jarmon'
         ))
-
-        self.log('Removing working dir: %s' % (tmpdir,))
-        shutil.rmtree(tmpdir)
