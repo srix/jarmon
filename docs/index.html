@@ -8,6 +8,8 @@
     <h2>Contents</h2>
     <ol>
         <li><a href="#browser-compatibility">Browser Compatibility</a></li>
+        <li><a href="#api-documentation">API documentation</a></li>
+        <li><a href="#release-process">Release process and tools</a></li>
     </ol>
     <h2 id="browser-compatibility">Browser Compatibility</h2>
     <p>Jarmon depends upon the <a href="http://code.google.com/p/flot/">Flot
@@ -77,3 +79,16 @@
             </dl>
     </dl>
 
+    <h2 id="api-documentation">API Documentation</h2>
+    <p>Jarmon includes <a href="apidocs/index.html">comprehensive API
+    documentation</a>
+    <p>This API documentation is generated automatically by the release command,
+    but you can also build it yourself by issuing the
+    <code>./bin/build apidoc</code> command from within a Jarmon source tree.
+    The documentation will be saved in a build subfolder.</p>
+
+    <h2 id="release-process">Release Process and Tools</h2>
+    <p>Jarmon includes tools to automate source archive releases. First check
+    out the source code, then issue the
+    <code>./bin/build -V 10.8 release</code> command from within the source
+    tree.</p>
