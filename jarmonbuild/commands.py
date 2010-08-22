@@ -15,12 +15,15 @@ from tempfile import gettempdir
 from urllib2 import urlopen
 from zipfile import ZipFile, ZIP_DEFLATED
 
+import pkg_resources
+
 
 JARMON_PROJECT_TITLE='Jarmon'
 JARMON_PROJECT_URL='http://www.launchpad.net/jarmon'
 
 YUIDOC_URL = 'http://yuilibrary.com/downloads/yuidoc/yuidoc_1.0.0b1.zip'
 YUIDOC_MD5 = 'cd5545d2dec8f7afe3d18e793538162c'
+YUIDOC_DEPENDENCIES = ['setuptools', 'pygments', 'cheetah']
 
 
 class BuildError(Exception):
@@ -67,16 +70,21 @@ class BuildApidocsCommand(BuildCommand):
         workingbranch_dir = self.workingbranch_dir
         build_dir = self.build_dir
 
+        # Check for yuidoc dependencies
+        for r in pkg_resources.parse_requirements(YUIDOC_DEPENDENCIES):
+            if not pkg_resources.working_set.find(r):
+                raise BuildError('Unsatisfied yuidoc dependency: %r' % (r,))
+
         # download and cache yuidoc
         yuizip_path = os.path.join(tmpdir, os.path.basename(YUIDOC_URL))
         if os.path.exists(yuizip_path):
+            self.log.debug('Using cached YUI doc')
             def producer():
-                self.log.debug('Using cached YUI doc')
                 yield open(yuizip_path).read()
         else:
+            self.log.debug('Downloading YUI Doc')
             def producer():
                 with open(yuizip_path, 'w') as yuizip:
-                    self.log.debug('Downloading YUI Doc')
                     download = urlopen(YUIDOC_URL)
                     while True:
                         bytes = download.read(1024*10)
@@ -104,7 +112,8 @@ class BuildApidocsCommand(BuildCommand):
         yuidoc_dir = os.path.join(build_dir, 'yuidoc')
 
         # extract yuidoc folder from the downloaded zip file
-        self.log.debug('Extracting YUI Doc from %s to %s' % (yuizip_path, yuidoc_dir))
+        self.log.debug(
+            'Extracting YUI Doc from %s to %s' % (yuizip_path, yuidoc_dir))
         zip = ZipFile(yuizip_path)
         zip.extractall(
             build_dir, (m for m in zip.namelist() if m.startswith('yuidoc')))
@@ -149,8 +158,9 @@ class BuildReleaseCommand(BuildCommand):
 
         self.log.debug('Record the branch version')
         from bzrlib.branch import Branch
-        from bzrlib.version_info_formats.format_python import PythonVersionInfoBuilder
-        v = PythonVersionInfoBuilder(Branch.open(workingbranch_dir))
+        from bzrlib.version_info_formats import format_python
+        v = format_python.PythonVersionInfoBuilder(
+            Branch.open(workingbranch_dir))
         versionfile_path = os.path.join(build_dir, 'jarmonbuild', '_version.py')
         with open(versionfile_path, 'w') as f:
             v.generate(f)
