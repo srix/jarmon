@@ -56,9 +56,10 @@ http {
         location / {
             root   .;
             index  index.html;
+            autoindex on;
         }
 
-        location /data {
+        location /docs/examples/data {
             alias /var/lib/collectd/rrd/aziz;
             autoindex on;
         }
