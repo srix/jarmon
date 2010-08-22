@@ -107,7 +107,7 @@ class BuildApidocsCommand(BuildCommand):
         check_call((
             sys.executable,
             os.path.join(yuidoc_dir, 'bin', 'yuidoc.py'),
-            workingbranch_dir,
+            os.path.join(workingbranch_dir, 'jarmon'),
             '--parseroutdir=%s' % (
                 os.path.join(build_dir, 'docs', 'apidocs'),),
             '--outputdir=%s' % (
