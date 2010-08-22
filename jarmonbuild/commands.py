@@ -4,6 +4,7 @@ Functions and Classes for automating the release of Jarmon
 """
 
 import hashlib
+import logging
 import os
 import shutil
 import sys
@@ -12,6 +13,7 @@ from subprocess import check_call
 from tempfile import gettempdir
 from urllib2 import urlopen
 from zipfile import ZipFile
+
 
 JARMON_VERSION='10.8'
 JARMON_PROJECT_TITLE='Jarmon'
@@ -28,24 +30,20 @@ class BuildError(Exception):
     pass
 
 
-class BuildApidocsCommand(object):
+class BuildCommand(object):
+    def __init__(self, log=None):
+        if log is not None:
+            self.log = log
+        else:
+            self.log = logging.getLogger()
+
+
+class BuildApidocsCommand(BuildCommand):
     """
     Download YUI Doc and use it to generate apidocs for jarmon
     """
 
-    def __init__(self, _stdout=sys.stdout, _stderr=sys.stderr):
-        self.stdout = _stdout
-        self.stderr = _stderr
-
-    def log(self, message, newline=os.linesep):
-        """
-        @param message: A message to be logged
-        @param newline: The newline string to be appended to the message. Use
-            '' to prevent a newline
-        """
-        self.stderr.write(''.join((message, newline)))
-
-    def main(self, argv=sys.argv[1:]):
+    def main(self, argv=sys.argv):
         """
         The main entry point for the build-apidocs command
 
@@ -57,30 +55,28 @@ class BuildApidocsCommand(object):
         # setup working dir
         build_dir = os.path.join(workingbranch_dir, 'build')
         if not os.path.isdir(build_dir):
-            self.log('Creating working dir: %s' % (build_dir,))
+            self.log.debug('Creating working dir: %s' % (build_dir,))
             os.mkdir(build_dir)
         else:
-            self.log('Using working dir: %s' % (build_dir,))
+            self.log.debug('Using working dir: %s' % (build_dir,))
 
         # download and cache yuidoc
         yuizip_path = os.path.join(tmpdir, os.path.basename(YUIDOC_URL))
         if os.path.exists(yuizip_path):
             def producer():
-                self.log('Using cached YUI doc')
+                self.log.debug('Using cached YUI doc')
                 yield open(yuizip_path).read()
         else:
             def producer():
                 with open(yuizip_path, 'w') as yuizip:
-                    self.log('Downloading YUI Doc', newline='')
+                    self.log.debug('Downloading YUI Doc')
                     download = urlopen(YUIDOC_URL)
                     while True:
                         bytes = download.read(1024*10)
                         if not bytes:
-                            self.log('')
                             break
                         else:
                             yuizip.write(bytes)
-                            self.log('.', newline='')
                             yield bytes
 
         checksum = hashlib.md5()
@@ -93,7 +89,7 @@ class BuildApidocsCommand(object):
                 'YUI Doc checksum error. File: %s, '
                 'Expected: %s, Got: %s' % (yuizip_path, YUIDOC_MD5, actual_md5))
         else:
-            self.log('YUI Doc checksum verified')
+            self.log.debug('YUI Doc checksum verified')
 
         # Remove any existing apidocs so that we can track removed files
         shutil.rmtree(os.path.join(build_dir, 'docs', 'apidocs'), True)
@@ -101,13 +97,13 @@ class BuildApidocsCommand(object):
         yuidoc_dir = os.path.join(build_dir, 'yuidoc')
 
         # extract yuidoc folder from the downloaded zip file
-        self.log('Extracting YUI Doc from %s to %s' % (yuizip_path, yuidoc_dir))
+        self.log.debug('Extracting YUI Doc from %s to %s' % (yuizip_path, yuidoc_dir))
         zip = ZipFile(yuizip_path)
         zip.extractall(
             build_dir, (m for m in zip.namelist() if m.startswith('yuidoc')))
 
         # Use the yuidoc script that we just extracted to generate new docs
-        self.log('Running YUI Doc')
+        self.log.debug('Running YUI Doc')
         check_call((
             sys.executable,
             os.path.join(yuidoc_dir, 'bin', 'yuidoc.py'),
@@ -125,3 +121,19 @@ class BuildApidocsCommand(object):
         ))
 
         shutil.rmtree(yuidoc_dir)
+
+
+class BuildSourceArchiveCommand(object):
+    def main(self, argv=sys.argv):
+        workingbranch_dir = os.path.join(os.path.dirname(__file__), '..')
+
+        # setup working dir
+        build_dir = os.path.join(workingbranch_dir, 'build')
+
+        # Use bzr to export the versioned files to a build folder
+        from bzrlib.commands import main as bzr_main
+        status = bzr_main(['bzr', 'export', build_dir, workingbranch_dir])
+        if status != 0:
+            raise BuildError('bzr export failure. Status: %r' % (status,))
+
+        # Generate apidocs
