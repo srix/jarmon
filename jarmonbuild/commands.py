@@ -12,6 +12,9 @@ from subprocess import check_call
 from urllib2 import urlopen
 from zipfile import ZipFile
 
+JARMON_VERSION='10.8'
+JARMON_PROJECT_TITLE='Jarmon'
+JARMON_PROJECT_URL='http://www.launchpad.net/jarmon'
 
 YUIDOC_URL = 'http://yuilibrary.com/downloads/yuidoc/yuidoc_1.0.0b1.zip'
 YUIDOC_MD5 = 'cd5545d2dec8f7afe3d18e793538162c'
@@ -110,12 +113,14 @@ class BuildApidocsCommand(object):
             sys.executable,
             os.path.join(tmpdir, 'yuidoc', 'bin', 'yuidoc.py'),
             workingbranch_dir,
-            '-p', os.path.join(workingbranch_dir, 'docs', 'apidocs'),
-            '-o', os.path.join(workingbranch_dir, 'docs', 'apidocs'),
-            '-t', os.path.join(
-                        workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),
-            '-v', '10.8',
-            '-Y', '2',
-            '--project=Jarmon',
-            '--projecturl=http://www.launchpad.net/jarmon'
+            '--parseroutdir=%s' % (
+                os.path.join(workingbranch_dir, 'docs', 'apidocs'),),
+            '--outputdir=%s' % (
+                os.path.join(workingbranch_dir, 'docs', 'apidocs'),),
+            '--template=%s' % (
+                os.path.join(
+                    workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),),
+            '--version=%s' % (JARMON_VERSION,),
+            '--project=%s' % (JARMON_PROJECT_TITLE,),
+            '--projecturl=%s' % (JARMON_PROJECT_URL,)
         ))
