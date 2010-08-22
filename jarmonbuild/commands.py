@@ -72,6 +72,9 @@ class BuildApidocsCommand(object):
         zip.extractall(
             tmpdir, (m for m in zip.namelist() if m.startswith('yuidoc')))
 
+        # Remove any existing apidocs so that we can track removed files
+        shutil.rmtree(os.path.join(workingbranch_dir, 'docs', 'apidocs'))
+
         # Use the yuidoc script that we just extracted to generate new docs
         self.log('Running YUI Doc')
         check_call((
