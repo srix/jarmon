@@ -4,7 +4,7 @@
  * Unit tests for Jarmon
  **/
 
-YUI().use('test', function(Y) {
+YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     Y.Test.Runner.add(new Y.Test.Case({
         name: "jarmon.downloadBinary",
 
@@ -27,6 +27,13 @@ YUI().use('test', function(Y) {
             this.wait();
         },
     }));
+
+    //initialize the console
+    var yconsole = new Y.Console({
+        newestOnTop: false,
+        width:'600px'
+    });
+    yconsole.render('#log');
 
     //run all tests
     Y.Test.Runner.run();
