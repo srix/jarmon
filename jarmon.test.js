@@ -18,7 +18,6 @@ YUI().use('test', function(Y) {
             var d = new jarmon.downloadBinary('non-existent-file.html');
             d.addBoth(
                 function(self, ret) {
-                    console.log(ret);
                     self.resume(function() {
                         Y.Assert.isInstanceOf(Error, ret);
                         Y.Assert.areEqual(404, ret.message);
