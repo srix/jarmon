@@ -15,6 +15,10 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         },
 
         test_urlNotFound: function () {
+            /**
+             * When url cannot be found, the deferred should errback with status
+             * 404.
+             **/
             var d = new jarmon.downloadBinary('non-existent-file.html');
             d.addBoth(
                 function(self, ret) {
@@ -26,6 +30,24 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
 
             this.wait();
         },
+
+        test_urlFound: function () {
+            /**
+             * When url is found, the deferred should callback with an instance
+             * of javascriptrrd.BinaryFile
+             **/
+            var d = new jarmon.downloadBinary('testfile.bin');
+            d.addBoth(
+                function(self, ret) {
+                    self.resume(function() {
+                        Y.Assert.isInstanceOf(BinaryFile, ret);
+                        Y.Assert.areEqual(String.fromCharCode(0), ret.getRawData());
+                    });
+                }, this);
+
+            this.wait();
+        },
+
     }));
 
     //initialize the console
