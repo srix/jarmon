@@ -8,12 +8,6 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     Y.Test.Runner.add(new Y.Test.Case({
         name: "jarmon.downloadBinary",
 
-        setUp : function () {
-        },
-
-        tearDown : function () {
-        },
-
         test_urlNotFound: function () {
             /**
              * When url cannot be found, the deferred should errback with status
@@ -46,9 +40,31 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                 }, this);
 
             this.wait();
-        },
+        }
 
     }));
+
+
+    Y.Test.Runner.add(new Y.Test.Case({
+        name: "jarmon.RrdQuery",
+
+        test_getDataTimeRangeOverlapError: function () {
+            /**
+             * The starttime must be less than the endtime
+             **/
+            var rq = new jarmon.RrdQuery({}, '');
+            var error = null;
+            try {
+                rq.getData(1, 0);
+            } catch(e) {
+                error = e;
+            }
+            Y.Assert.isInstanceOf(jarmon.TimeRangeError, error);
+        }
+
+    }));
+
+
 
     //initialize the console
     var yconsole = new Y.Console({

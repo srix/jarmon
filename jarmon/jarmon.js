@@ -27,6 +27,7 @@ if(typeof jarmon == 'undefined') {
     var jarmon = {};
 }
 
+
 jarmon.downloadBinary = function(url) {
     /**
      * Download a binary file asynchronously using the jQuery.ajax function
@@ -126,6 +127,20 @@ jarmon.localTimeFormatter = function (v, axis) {
 };
 
 
+jarmon.TimeRangeError = function(message) {
+    /**
+     * Raised when an invalid timerange is encountered.
+     *
+     * @class jarmon.TimeRangeError
+     * @constructor
+     * @param message {String} A description of the error reason
+     **/
+    this.name = "TimeRangeError";
+    this.message = (message || "");
+}
+jarmon.TimeRangeError.prototype = Error.prototype;
+
+
 /**
  * A wrapper around an instance of javascriptrrd.RRDFile which provides a
  * convenient way to query the RRDFile based on time range, RRD data source (DS)
@@ -156,6 +171,14 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
      * @return {Object} A Flot compatible data series
      *      eg label: '', data: [], unit: ''
      **/
+
+    if (startTime >= endTime) {
+        throw new jarmon.TimeRangeError(
+            ['starttime must be less than endtime. ',
+             'starttime: ', starttime,
+             'endtime: ', endtime].join(''));
+    }
+
     var startTimestamp = startTime/1000;
 
     var lastUpdated = this.rrd.getLastUpdate();
