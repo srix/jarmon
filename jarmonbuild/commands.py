@@ -34,13 +34,9 @@ class BuildError(Exception):
 
 
 class BuildCommand(object):
-    def __init__(self, buildversion, log=None):
-        self.buildversion = buildversion
-        if log is not None:
-            self.log = log
-        else:
-            self.log = logging.getLogger(
-                '%s.%s' % (__name__, self.__class__.__name__))
+    def __init__(self):
+        self.log = logging.getLogger(
+            '%s.%s' % (__name__, self.__class__.__name__))
 
         self.workingbranch_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), '..'))
@@ -60,12 +56,26 @@ class BuildApidocsCommand(BuildCommand):
     Download YUI Doc and use it to generate apidocs for jarmon
     """
 
+    command_name = 'apidocs'
+
     def main(self, argv):
         """
         The main entry point for the build-apidocs command
 
         @param argv: The list of arguments passed to the build-apidocs command
         """
+
+        parser = OptionParser(
+            usage='build [options] %s VERSION' % (self.command_name,))
+        parser.disable_interspersed_args()
+        options, args = parser.parse_args(argv)
+
+        if len(args) != 1:
+            parser.error('Wrong number of arguments. This command expects a '
+                         'version number only.')
+
+        buildversion = args[0]
+
         tmpdir = gettempdir()
         workingbranch_dir = self.workingbranch_dir
         build_dir = self.build_dir
@@ -131,7 +141,7 @@ class BuildApidocsCommand(BuildCommand):
             '--template=%s' % (
                 os.path.join(
                     workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),),
-            '--version=%s' % (self.buildversion,),
+            '--version=%s' % (buildversion,),
             '--project=%s' % (JARMON_PROJECT_TITLE,),
             '--projecturl=%s' % (JARMON_PROJECT_URL,)
         ), stdout=PIPE, stderr=PIPE,)
@@ -145,7 +155,21 @@ class BuildReleaseCommand(BuildCommand):
     upload to Launchpad.
     """
 
+    command_name = 'release'
+
     def main(self, argv):
+
+        parser = OptionParser(
+            usage='build [options] %s VERSION' % (self.command_name,))
+        parser.disable_interspersed_args()
+        options, args = parser.parse_args(argv)
+
+        if len(args) != 1:
+            parser.error('Wrong number of arguments. This command expects a '
+                         'version number only.')
+
+        buildversion = args[0]
+
         workingbranch_dir = self.workingbranch_dir
         build_dir = self.build_dir
 
@@ -167,11 +191,11 @@ class BuildReleaseCommand(BuildCommand):
 
 
         self.log.debug('Generate apidocs')
-        BuildApidocsCommand(buildversion=self.buildversion).main(argv)
+        BuildApidocsCommand().main([buildversion])
 
 
         self.log.debug('Generate archive')
-        archive_root = 'jarmon-%s' % (self.buildversion,)
+        archive_root = 'jarmon-%s' % (buildversion,)
         prefix_len = len(build_dir) + 1
         z = ZipFile('%s.zip' % (archive_root,), 'w', ZIP_DEFLATED)
         try:
@@ -185,10 +209,12 @@ class BuildReleaseCommand(BuildCommand):
             z.close()
 
 
-class BuildTestDataCommand(object):
-    def __init__(self, buildversion):
-        self.log = logging.getLogger(
-                                '%s.%s' % (__name__, self.__class__.__name__))
+class BuildTestDataCommand(BuildCommand):
+    """
+    Create data for use in unittests
+    """
+
+    command_name = 'testdata'
 
     def main(self, argv):
         from pyrrd.rrd import DataSource, RRA, RRD
@@ -205,12 +231,14 @@ class BuildTestDataCommand(object):
         my_rrd.bufferValue(2, '12363')
         my_rrd.update()
 
-# The available sub commands
-build_commands = {
-    'apidocs': BuildApidocsCommand,
-    'release': BuildReleaseCommand,
-    'testdata': BuildTestDataCommand,
-}
+
+
+# The available subcommands
+SUBCOMMAND_HANDLERS = [
+    BuildApidocsCommand,
+    BuildReleaseCommand,
+    BuildTestDataCommand,
+]
 
 
 def main(argv=sys.argv[1:]):
@@ -218,10 +246,13 @@ def main(argv=sys.argv[1:]):
     The root build command which dispatches to various subcommands for eg
     building apidocs and release zip files.
     """
-    parser = OptionParser(usage='%prog [options] SUBCOMMAND [options]')
-    parser.add_option(
-        '-V', '--build-version', dest='buildversion', default='0',
-        metavar='BUILDVERSION', help='Specify the build version')
+
+    build_commands = dict(
+        (handler.command_name, handler) for handler in SUBCOMMAND_HANDLERS)
+
+    parser = OptionParser(
+        usage='build [options] SUBCOMMAND [options]',
+        description='Available subcommands are: %r' % (build_commands.keys(),))
     parser.add_option(
         '-d', '--debug', action='store_true', default=False, dest='debug',
         help='Print verbose debug log to stderr')
@@ -257,4 +288,4 @@ def main(argv=sys.argv[1:]):
         log.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
 
-    command_factory(buildversion=options.buildversion).main(argv=args)
+    command_factory().main(argv=args)
