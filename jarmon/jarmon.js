@@ -263,7 +263,7 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
 jarmon.RrdQueryRemote = function(url, unit, downloader) {
     this.url = url;
     this.unit = unit;
-    this.downloader = downloader;
+    this.downloader = downloader || jarmon.downloadBinary;
     this.lastUpdate = 0;
     this._download = null;
 };

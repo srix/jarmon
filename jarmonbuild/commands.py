@@ -185,10 +185,31 @@ class BuildReleaseCommand(BuildCommand):
             z.close()
 
 
+class BuildTestDataCommand(object):
+    def __init__(self, buildversion):
+        self.log = logging.getLogger(
+                                '%s.%s' % (__name__, self.__class__.__name__))
+
+    def main(self, argv):
+        from pyrrd.rrd import DataSource, RRA, RRD
+
+        dss = []
+        rras = []
+        filename = '/tmp/test.rrd'
+        dss.append(DataSource(dsName='speed', dsType='COUNTER', heartbeat=600))
+        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=24))
+        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=6, rows=10))
+        my_rrd = RRD(filename, ds=dss, rra=rras, start=0)
+        my_rrd.create()
+        my_rrd.bufferValue(1, '12363')
+        my_rrd.bufferValue(2, '12363')
+        my_rrd.update()
+
 # The available sub commands
 build_commands = {
     'apidocs': BuildApidocsCommand,
     'release': BuildReleaseCommand,
+    'testdata': BuildTestDataCommand,
 }
 
 

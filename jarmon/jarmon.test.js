@@ -48,19 +48,54 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     Y.Test.Runner.add(new Y.Test.Case({
         name: "jarmon.RrdQuery",
 
+        setUp: function() {
+            this.d = new jarmon.downloadBinary('simple.rrd')
+            .addCallback(
+                function(self, binary) {
+                    try {
+                        return new RRDFile(binary);
+                    } catch(e) {
+                        console.log(e);
+                    }
+                }, this)
+            .addErrback(
+                function(ret) {
+                    console.log(ret);
+                });
+        },
+
         test_getDataTimeRangeOverlapError: function () {
             /**
              * The starttime must be less than the endtime
              **/
-            var rq = new jarmon.RrdQuery({}, '');
-            var error = null;
-            try {
-                rq.getData(1, 0);
-            } catch(e) {
-                error = e;
-            }
-            Y.Assert.isInstanceOf(jarmon.TimeRangeError, error);
-        }
+            this.d.addCallback(
+                function(self, rrd) {
+                    self.resume(function() {
+                        var rq = new jarmon.RrdQuery(self.rrd, '');
+                        var error = null;
+                        try {
+                            rq.getData(1, 0);
+                        } catch(e) {
+                            error = e;
+                        }
+                        Y.Assert.isInstanceOf(jarmon.TimeRangeError, error);
+                    });
+                }, this);
+            this.wait();
+        },
+
+        test_getDataSimple: function () {
+            /**
+             * The starttime must be less than the endtime
+             **/
+            this.d.addCallback(
+                function(self, rrd) {
+                    self.resume(function() {
+                        Y.Assert.areEqual(1, rrd.getLastUpdate());
+                    });
+                }, this);
+            this.wait();
+        },
 
     }));
 
