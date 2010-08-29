@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import sys
+import time
 
 from optparse import OptionParser
 from subprocess import check_call, PIPE
@@ -217,18 +218,27 @@ class BuildTestDataCommand(BuildCommand):
     command_name = 'testdata'
 
     def main(self, argv):
+        """
+        Create an RRD file with values 0-9 entered at 1 second intervals from
+        1980-01-01 00:00:00 (the first date that rrdtool allows)
+        """
+        from datetime import datetime
         from pyrrd.rrd import DataSource, RRA, RRD
-
+        start = int(datetime(1980, 1, 1, 0, 0).strftime('%s'))
         dss = []
         rras = []
-        filename = '/tmp/test.rrd'
-        dss.append(DataSource(dsName='speed', dsType='COUNTER', heartbeat=600))
-        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=24))
-        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=6, rows=10))
-        my_rrd = RRD(filename, ds=dss, rra=rras, start=0)
+        filename = os.path.join(self.build_dir, 'test.rrd')
+
+        rows = 10
+
+        dss.append(DataSource(dsName='speed', dsType='GAUGE', heartbeat=1))
+        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=rows))
+        my_rrd = RRD(filename, ds=dss, rra=rras, start=start, step=1)
         my_rrd.create()
-        my_rrd.bufferValue(1, '12363')
-        my_rrd.bufferValue(2, '12363')
+
+        for i, t in enumerate(range(start, start+rows, 1)):
+            my_rrd.bufferValue(t+1, i)
+
         my_rrd.update()
 
 
