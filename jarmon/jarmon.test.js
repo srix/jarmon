@@ -49,7 +49,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         name: "jarmon.RrdQuery",
 
         setUp: function() {
-            this.d = new jarmon.downloadBinary('simple.rrd')
+            this.d = new jarmon.downloadBinary('build/test.rrd')
             .addCallback(
                 function(self, binary) {
                     try {
@@ -86,12 +86,20 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
 
         test_getDataSimple: function () {
             /**
-             * The starttime must be less than the endtime
+             * The generated rrd file should have values 0-9 at 1s intervals
+             * starting at 1980-01-01 00:00:00
              **/
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        Y.Assert.areEqual(1, rrd.getLastUpdate());
+                        var firstUpdate = new Date('1 jan 1980 00:00:00').getTime();
+                        var lastUpdate = firstUpdate + 10*1000;
+                        Y.Assert.areEqual(
+                            lastUpdate/1000, rrd.getLastUpdate());
+                        var q = new jarmon.RrdQuery(rrd, '');
+                        var data = q.getData(firstUpdate, lastUpdate);
+                        Y.Assert.areEqual(
+                            0, data.data[0][1]);
                     });
                 }, this);
             this.wait();
