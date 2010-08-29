@@ -52,11 +52,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.d = new jarmon.downloadBinary('build/test.rrd')
             .addCallback(
                 function(self, binary) {
-                    try {
-                        return new RRDFile(binary);
-                    } catch(e) {
-                        console.log(e);
-                    }
+                    return new RRDFile(binary);
                 }, this)
             .addErrback(
                 function(ret) {
@@ -143,10 +139,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     });
                 }, this);
             this.wait();
-        },
-
-
-
+        }
     }));
 
     Y.Test.Runner.add(new Y.Test.Case({
@@ -156,11 +149,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.d = new jarmon.downloadBinary('build/test.rrd')
             .addCallback(
                 function(self, binary) {
-                    try {
-                        return new RRDFile(binary);
-                    } catch(e) {
-                        console.log(e);
-                    }
+                    return new RRDFile(binary);
                 }, this)
             .addErrback(
                 function(ret) {
@@ -188,34 +177,31 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.wait();
         },
 
-        test_getDataSimple: function () {
+        test_getData: function () {
             /**
              * The generated rrd file should have values 0-9 at 1s intervals
-             * starting at 1980-01-01 00:00:00
+             * starting at 1980-01-01 00:00:01
+             * Result should include a data points with times > starttime and
+             * <= endTime
              **/
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        var rra = rrd.getRRA(0)
-                        console.log(rra.getEl(0, 0));
+                        var startTime = new Date('1 jan 1980 00:00:00').getTime();
+                        var endTime = new Date('1 jan 1980 00:00:10').getTime();
 
-
-                        var firstUpdate = new Date('1 jan 1980 00:00:00').getTime();
-                        var lastUpdate = firstUpdate + 10*1000;
-                        Y.Assert.areEqual(
-                            lastUpdate/1000, rrd.getLastUpdate());
-
-
-                        /*
                         var q = new jarmon.RrdQuery(rrd, '');
-                        var data = q.getData(firstUpdate, lastUpdate);
+                        var data = q.getData(startTime, endTime);
                         Y.Assert.areEqual(
-                            firstUpdate+1000, data.data[0][0]);
-                        */
+                            10, data.data.length);
+                        Y.Assert.areEqual(
+                            startTime+1000, data.data[0][0]);
+                        Y.Assert.areEqual(
+                            endTime, data.data[9][0]);
                     });
                 }, this);
             this.wait();
-        },
+        }
 
     }));
 
