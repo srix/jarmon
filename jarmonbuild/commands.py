@@ -230,11 +230,12 @@ class BuildTestDataCommand(BuildCommand):
         rras = []
         filename = os.path.join(self.build_dir, 'test.rrd')
 
-        rows = 6
+        rows = 12
         step = 10
 
         dss.append(DataSource(dsName='speed', dsType='GAUGE', heartbeat=2*step))
         rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=rows))
+        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=12, rows=rows))
         my_rrd = RRD(filename, ds=dss, rra=rras, start=start, step=step)
         my_rrd.create()
 

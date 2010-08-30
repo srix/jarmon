@@ -47,9 +47,10 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     var RRD_STEP = 10;
     var RRD_DSNAME = 'speed';
     var RRD_DSINDEX = 0;
-    var RRD_RRAROWS = 6;
+    var RRD_RRACOUNT = 2;
+    var RRD_RRAROWS = 12;
     var RRD_STARTTIME = new Date('1 jan 1980 00:00:00').getTime();
-    var RRD_ENDTIME = new Date('1 jan 1980 00:01:01').getTime();
+    var RRD_ENDTIME = new Date('1 jan 1980 00:02:01').getTime();
 
     Y.Test.Runner.add(new Y.Test.Case({
         name: "javascriptrrd.RRDFile",
@@ -112,7 +113,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        Y.Assert.areEqual(1, rrd.getNrRRAs());
+                        Y.Assert.areEqual(RRD_RRACOUNT, rrd.getNrRRAs());
                     });
                 }, this);
             this.wait();
@@ -137,7 +138,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                         }
                         var error = null
                         try {
-                            rra.getEl(10, 0);
+                            rra.getEl(RRD_RRAROWS+1, 0);
                         } catch(e) {
                             error = e;
                         }
@@ -195,10 +196,10 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     self.resume(function() {
                         var rq = new jarmon.RrdQuery(rrd, '');
                         var data = rq.getData(RRD_STARTTIME, RRD_ENDTIME);
-                        console.log(data.data);
                         Y.Assert.areEqual(RRD_RRAROWS, data.data.length);
                         Y.Assert.areEqual(2, data.data[2][1]);
-                        Y.Assert.areEqual(RRD_STARTTIME+RRD_STEP*1000, data.data[0][0]);
+                        Y.Assert.areEqual(
+                            RRD_STARTTIME+RRD_STEP*1000, data.data[0][0]);
                         //Y.Assert.areEqual(
                         //    RRD_ENDTIME, data.data[RRD_RRAROWS-1][0]);
                     });
