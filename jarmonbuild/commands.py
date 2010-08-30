@@ -10,6 +10,7 @@ import shutil
 import sys
 import time
 
+from datetime import datetime
 from optparse import OptionParser
 from subprocess import check_call, PIPE
 from tempfile import gettempdir
@@ -229,18 +230,26 @@ class BuildTestDataCommand(BuildCommand):
         rras = []
         filename = os.path.join(self.build_dir, 'test.rrd')
 
-        rows = 10
+        rows = 6
+        step = 10
 
-        dss.append(DataSource(dsName='speed', dsType='GAUGE', heartbeat=1))
+        dss.append(DataSource(dsName='speed', dsType='GAUGE', heartbeat=2*step))
         rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=rows))
-        my_rrd = RRD(filename, ds=dss, rra=rras, start=start, step=1)
+        my_rrd = RRD(filename, ds=dss, rra=rras, start=start, step=step)
         my_rrd.create()
 
-        for i, t in enumerate(range(start, start+rows, 1)):
-            my_rrd.bufferValue(t+1, i)
+        for i, t in enumerate(range(start+step, start+step+(rows*step), step)):
+            self.log.debug('DATA: %s %s (%s)' % (t, i, datetime.fromtimestamp(t)))
+            my_rrd.bufferValue(t, i)
+
+        # Add further data 1 second later to demonstrate that the rrd
+        # lastupdatetime does not necessarily fall on a step boundary
+        t += 1
+        i += 1
+        self.log.debug('DATA: %s %s (%s)' % (t, i, datetime.fromtimestamp(t)))
+        my_rrd.bufferValue(t, i)
 
         my_rrd.update()
-
 
 
 # The available subcommands

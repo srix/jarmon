@@ -44,6 +44,12 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
 
     }));
 
+    var RRD_STEP = 10;
+    var RRD_DSNAME = 'speed';
+    var RRD_DSINDEX = 0;
+    var RRD_RRAROWS = 6;
+    var RRD_STARTTIME = new Date('1 jan 1980 00:00:00').getTime();
+    var RRD_ENDTIME = new Date('1 jan 1980 00:01:01').getTime();
 
     Y.Test.Runner.add(new Y.Test.Case({
         name: "javascriptrrd.RRDFile",
@@ -63,14 +69,13 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         test_getLastUpdate: function () {
             /**
              * The generated rrd file should have a lastupdate date of
-             * 1980-01-01 00:00:10
+             * 1980-01-01 00:50:01
              **/
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        var lastUpdate = new Date('1 jan 1980 00:00:10').getTime();
                         Y.Assert.areEqual(
-                            lastUpdate/1000, rrd.getLastUpdate());
+                            RRD_ENDTIME/1000, rrd.getLastUpdate());
                     });
                 }, this);
             this.wait();
@@ -85,11 +90,12 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        Y.Assert.areEqual('speed', rrd.getDS(0).getName());
-                        Y.Assert.areEqual(0, rrd.getDS('speed').getIdx());
+                        Y.Assert.areEqual(RRD_DSNAME, rrd.getDS(0).getName());
+                        Y.Assert.areEqual(
+                            RRD_DSINDEX, rrd.getDS('speed').getIdx());
                         var error = null;
                         try {
-                            rrd.getDS(1);
+                            rrd.getDS(RRD_DSINDEX+1);
                         } catch(e) {
                             error = e;
                         }
@@ -115,7 +121,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         test_getRRA: function () {
             /**
              * The generated rrd file should have a single RRA using AVERAGE
-             * consolidation, step=1, rows=10 and values 0-9
+             * consolidation, step=10, rows=6 and values 0-5
              * rra.getEl throws a RangeError if asked for row which doesn't
              * exist.
              **/
@@ -124,10 +130,10 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     self.resume(function() {
                         var rra = rrd.getRRA(0);
                         Y.Assert.areEqual('AVERAGE', rra.getCFName());
-                        Y.Assert.areEqual(1, rra.getStep());
-                        Y.Assert.areEqual(10, rra.getNrRows());
-                        for(var i=0; i<10; i++) {
-                            Y.Assert.areEqual(i, rra.getEl(i, 0));
+                        Y.Assert.areEqual(RRD_STEP, rra.getStep());
+                        Y.Assert.areEqual(RRD_RRAROWS, rra.getNrRows());
+                        for(var i=0; i<RRD_RRAROWS; i++) {
+                            Y.Assert.areEqual(i, rra.getEl(i, RRD_DSINDEX));
                         }
                         var error = null
                         try {
@@ -179,29 +185,26 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
 
         test_getData: function () {
             /**
-             * The generated rrd file should have values 0-9 at 1s intervals
-             * starting at 1980-01-01 00:00:01
+             * The generated rrd file should have values 0-9 at 300s intervals
+             * starting at 1980-01-01 00:00:00
              * Result should include a data points with times > starttime and
              * <= endTime
              **/
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        var startTime = new Date('1 jan 1980 00:00:00').getTime();
-                        var endTime = new Date('1 jan 1980 00:00:10').getTime();
-
-                        var q = new jarmon.RrdQuery(rrd, '');
-                        var data = q.getData(startTime, endTime);
-                        Y.Assert.areEqual(
-                            10, data.data.length);
-                        Y.Assert.areEqual(
-                            startTime+1000, data.data[0][0]);
-                        Y.Assert.areEqual(
-                            endTime, data.data[9][0]);
+                        var rq = new jarmon.RrdQuery(rrd, '');
+                        var data = rq.getData(RRD_STARTTIME, RRD_ENDTIME);
+                        console.log(data.data);
+                        Y.Assert.areEqual(RRD_RRAROWS, data.data.length);
+                        Y.Assert.areEqual(2, data.data[2][1]);
+                        Y.Assert.areEqual(RRD_STARTTIME+RRD_STEP*1000, data.data[0][0]);
+                        //Y.Assert.areEqual(
+                        //    RRD_ENDTIME, data.data[RRD_RRAROWS-1][0]);
                     });
                 }, this);
             this.wait();
-        }
+        },
 
     }));
 
