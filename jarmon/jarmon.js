@@ -156,15 +156,15 @@ jarmon.RrdQuery = function(rrd, unit) {
     this.unit = unit;
 };
 
-jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
+jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfName) {
     /**
      * Generate a Flot compatible data object containing rows between start and
      * end time. The rows are taken from the first RRA whose data spans the
      * requested time range.
      *
      * @method getData
-     * @param startTime {Number} start timestamp
-     * @param endTime {Number} end timestamp
+     * @param startTimeJs {Number} start timestamp in microseconds
+     * @param endTimeJs {Number} end timestamp in microseconds
      * @param dsId {Variant} identifier of the RRD datasource (string or number)
      * @param cfName {String} The name of an RRD consolidation function (CF)
      *      eg AVERAGE, MIN, MAX
@@ -172,22 +172,31 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
      *      eg label: '', data: [], unit: ''
      **/
 
-    if (startTime >= endTime) {
+    if (startTimeJs >= endTimeJs) {
         throw new jarmon.TimeRangeError(
             ['starttime must be less than endtime. ',
-             'starttime: ', starttime,
-             'endtime: ', endtime].join(''));
+             'starttime: ', startTimeJs,
+             'endtime: ', endTimeJs].join(''));
     }
 
-    var startTimestamp = startTime/1000;
-
+    // The startTime, endTime and lastupdate time are not necessarily on a step
+    // boundaries. Here we divide, round and then multiply by the step size to
+    // find the nearest "Primary Data Point" (PDP) time.
+    var minStep = this.rrd.getMinStep();
+    var startTime = Math.round(startTimeJs/1000/minStep) * minStep;
     var lastUpdated = this.rrd.getLastUpdate();
-    var endTimestamp = lastUpdated;
-    if(endTime) {
-        endTimestamp = endTime/1000;
+    var lastPdpTime = Math.round(lastUpdated / minStep) * minStep;
+
+    var endTime = lastPdpTime;
+    if(endTimeJs) {
+        endTime = endTimeJs/1000;
         // If end time stamp is beyond the range of this rrd then reset it
-        if(lastUpdated < endTimestamp) {
-            endTimestamp = lastUpdated;
+        // XXX: Is this the correct behaviour. Perhaps better to throw exception
+        // or simply return nan for each missing PDP - like rrdtool fetch.
+        if(lastPdpTime < endTime) {
+            endTime = lastPdpTime;
+        } else {
+            endTime = Math.round(endTime / minStep) * minStep;
         }
     }
 
@@ -200,7 +209,7 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
         cfName = 'AVERAGE';
     }
 
-    var rra, step, rraRowCount, firstUpdated;
+    var rra, step, rraRowCount, firstPdpTime;
 
     for(var i=0; i<this.rrd.getNrRRAs(); i++) {
         // Look through all RRAs looking for the most suitable
@@ -214,11 +223,14 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
 
         step = rra.getStep();
         rraRowCount = rra.getNrRows();
-        firstUpdated = lastUpdated - (rraRowCount - 1) * step;
+
+        var lastRowTime = Math.round(lastUpdated/step)*step;
+        var firstRowTime = lastRowTime - rraRowCount * step;
+
         // We assume that the RRAs are listed in ascending order of time range,
         // therefore the first RRA which contains the range minimum should give
         // the highest resolution data for this range.
-        if(firstUpdated <= startTimestamp) {
+        if(firstRowTime <= startTime) {
             break;
         }
     }
@@ -228,15 +240,32 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
         throw new Error('Unrecognised consolidation function: ' + cfName);
     }
 
-    var startRow = rraRowCount - parseInt((lastUpdated - Math.max(startTimestamp, firstUpdated))/step) - 1;
-    var endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step) - 1;
+    var startRowTime = Math.floor(startTime/step)*step + step;
+    var endRowTime = Math.floor(endTime/step)*step + step;
 
     var flotData = [];
-    var timestamp = firstUpdated + (startRow - 1) * step;
+    var timestamp = startRowTime;
+
+    // Fill in any blank values at the start of the query, before we reach the
+    // first data in the chosen RRA
+    while(timestamp<=firstRowTime) {
+        flotData.push([timestamp*1000.0, null]);
+        timestamp+=step
+    }
+
     var dsIndex = ds.getIdx();
-    for (var i=startRow; i<=endRow; i++) {
+    var i=0;
+    while(timestamp<=lastRowTime) {
         flotData.push([timestamp*1000.0, rra.getEl(i, dsIndex)]);
-        timestamp += step;
+        i+=1;
+        timestamp+=step
+    }
+
+    // Fill in any blank values at the end of the query, after we've used all
+    // the data in the chosen RRA
+    while(timestamp<=endRowTime) {
+        flotData.push([timestamp*1000.0, null]);
+        timestamp+=step
     }
 
     // Now get the date of the earliest record in entire rrd file, ie that of

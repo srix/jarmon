@@ -50,7 +50,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     var RRD_RRACOUNT = 2;
     var RRD_RRAROWS = 12;
     var RRD_STARTTIME = new Date('1 jan 1980 00:00:00').getTime();
-    var RRD_ENDTIME = new Date('1 jan 1980 00:02:01').getTime();
+    var RRD_ENDTIME = new Date('1 jan 1980 00:02:00').getTime();
 
     Y.Test.Runner.add(new Y.Test.Case({
         name: "javascriptrrd.RRDFile",
@@ -76,7 +76,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                 function(self, rrd) {
                     self.resume(function() {
                         Y.Assert.areEqual(
-                            RRD_ENDTIME/1000, rrd.getLastUpdate());
+                            RRD_ENDTIME/1000+1, rrd.getLastUpdate());
                     });
                 }, this);
             this.wait();
@@ -196,12 +196,13 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     self.resume(function() {
                         var rq = new jarmon.RrdQuery(rrd, '');
                         var data = rq.getData(RRD_STARTTIME, RRD_ENDTIME);
-                        Y.Assert.areEqual(RRD_RRAROWS, data.data.length);
+                        Y.Assert.areEqual(RRD_RRAROWS+1, data.data.length);
                         Y.Assert.areEqual(2, data.data[2][1]);
                         Y.Assert.areEqual(
                             RRD_STARTTIME+RRD_STEP*1000, data.data[0][0]);
-                        //Y.Assert.areEqual(
-                        //    RRD_ENDTIME, data.data[RRD_RRAROWS-1][0]);
+                        Y.Assert.areEqual(
+                            RRD_ENDTIME + RRD_STEP*1000,
+                            data.data[data.data.length-1][0]);
                     });
                 }, this);
             this.wait();
