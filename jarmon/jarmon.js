@@ -190,14 +190,6 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
     var endTime = lastPdpTime;
     if(endTimeJs) {
         endTime = endTimeJs/1000;
-        // If end time stamp is beyond the range of this rrd then reset it
-        // XXX: Is this the correct behaviour. Perhaps better to throw exception
-        // or simply return nan for each missing PDP - like rrdtool fetch.
-        if(lastPdpTime < endTime) {
-            endTime = lastPdpTime;
-        } else {
-            endTime = Math.round(endTime / minStep) * minStep;
-        }
     }
 
     if(dsId == null) {
@@ -209,7 +201,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
         cfName = 'AVERAGE';
     }
 
-    var rra, step, rraRowCount, firstPdpTime;
+    var rra, step, rraRowCount, lastRowTime, firstRowTime;
 
     for(var i=0; i<this.rrd.getNrRRAs(); i++) {
         // Look through all RRAs looking for the most suitable
@@ -224,8 +216,8 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
         step = rra.getStep();
         rraRowCount = rra.getNrRows();
 
-        var lastRowTime = Math.round(lastUpdated/step)*step;
-        var firstRowTime = lastRowTime - rraRowCount * step;
+        lastRowTime = Math.round(lastUpdated/step)*step;
+        firstRowTime = lastRowTime - rraRowCount * step;
 
         // We assume that the RRAs are listed in ascending order of time range,
         // therefore the first RRA which contains the range minimum should give
@@ -248,18 +240,22 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
 
     // Fill in any blank values at the start of the query, before we reach the
     // first data in the chosen RRA
-    while(timestamp<=firstRowTime) {
+    while(timestamp<=endRowTime && timestamp<firstRowTime) {
         flotData.push([timestamp*1000.0, null]);
         timestamp+=step
     }
 
     var dsIndex = ds.getIdx();
-    var i=0;
-    while(timestamp<=lastRowTime) {
-        flotData.push([timestamp*1000.0, rra.getEl(i, dsIndex)]);
-        i+=1;
-        timestamp+=step
+    var val
+    var i = rraRowCount - 1 - (lastRowTime - timestamp)  / step;
+    while(timestamp<=endRowTime && timestamp < lastRowTime) {
+        val = rra.getEl(i, dsIndex)
+        flotData.push([timestamp*1000.0, val]);
+        i += 1;
+        timestamp += step
     }
+
+
 
     // Fill in any blank values at the end of the query, after we've used all
     // the data in the chosen RRA
