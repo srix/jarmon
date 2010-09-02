@@ -171,18 +171,41 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.d.addCallback(
                 function(self, rrd) {
                     self.resume(function() {
-                        var rq = new jarmon.RrdQuery(self.rrd, '');
+                        var rq = new jarmon.RrdQuery(rrd, '');
                         var error = null;
                         try {
                             rq.getData(1, 0);
                         } catch(e) {
                             error = e;
                         }
-                        Y.Assert.isInstanceOf(jarmon.TimeRangeError, error);
+                        Y.Assert.isInstanceOf(RangeError, error);
                     });
                 }, this);
             this.wait();
         },
+
+
+        test_getDataUnknownCfError: function () {
+            /**
+             * Error is raised if the rrd file doesn't contain an RRA with the
+             * requested consolidation function (CF)
+             **/
+            this.d.addCallback(
+                function(self, rrd) {
+                    self.resume(function() {
+                        var rq = new jarmon.RrdQuery(rrd, '');
+                        var error = null;
+                        try {
+                            rq.getData(RRD_STARTTIME, RRD_ENDTIME, 0, 'FOO');
+                        } catch(e) {
+                            error = e;
+                        }
+                        Y.Assert.isInstanceOf(TypeError, error);
+                    });
+                }, this);
+            this.wait();
+        },
+
 
         test_getData: function () {
             /**
