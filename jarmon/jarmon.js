@@ -521,6 +521,9 @@ jarmon.Chart.prototype.draw = function() {
     return MochiKit.Async.gatherResults(results)
             .addCallback(
                 function(self, data) {
+                    // Clear any previous error messages.
+                    self.template.find('.error').empty().hide();
+
                     var i, label, disabled = [];
                     unit = '';
                     for(i=0; i<data.length; i++) {
@@ -537,7 +540,7 @@ jarmon.Chart.prototype.draw = function() {
                         }
                     }
 
-                    $.plot(self.template.find('.chart'), data, self.options);
+                    $.plot(self.template.find('.chart').empty().show(), data, self.options);
 
                     var yaxisUnitLabel = $('<div>').text(self.siPrefix + unit)
                                                    .css({width: '100px',
@@ -556,7 +559,7 @@ jarmon.Chart.prototype.draw = function() {
                     // table is useful as it generates an optimum label element
                     // width which we can copy to the new divs + a little extra
                     // to accomodate the color box
-                    var legend = self.template.find('.graph-legend');
+                    var legend = self.template.find('.graph-legend').show();
                     legend.empty();
                     self.template.find('.legendLabel')
                         .each(function(i, el) {
@@ -585,7 +588,10 @@ jarmon.Chart.prototype.draw = function() {
                 }, this)
             .addErrback(
                 function(self, failure) {
-                    self.template.text('error: ' + failure.message);
+                    self.template.find('.chart').empty().hide();
+                    self.template.find('.graph-legend').empty().hide();
+                    self.template.find('.error').text('error: ' + failure.message);
+
                 }, this)
             .addBoth(
                 function(self, res) {
