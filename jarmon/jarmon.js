@@ -165,16 +165,11 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
              'endtime: ', endTimeJs].join(''));
     }
 
-    // The startTime, endTime and lastupdate time are not necessarily on a step
-    // boundaries. Here we divide, round and then multiply by the step size to
-    // find the nearest "Primary Data Point" (PDP) time.
-    console.log('RRD: ', this.rrd);
-    var minStep = this.rrd.getMinStep();
-    var startTime = Math.round(startTimeJs/1000/minStep) * minStep;
+    var startTime = startTimeJs/1000;
     var lastUpdated = this.rrd.getLastUpdate();
-    var lastPdpTime = Math.round(lastUpdated / minStep) * minStep;
 
-    var endTime = lastPdpTime;
+    // default endTime to the last updated time (quantized to rrd step boundry)
+    var endTime = lastUpdated - lastUpdated%this.rrd.getMinStep();
     if(endTimeJs) {
         endTime = endTimeJs/1000;
     }
@@ -202,8 +197,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
 
         step = rra.getStep();
         rraRowCount = rra.getNrRows();
-
-        lastRowTime = Math.round(lastUpdated/step)*step;
+        lastRowTime = lastUpdated-lastUpdated%step;
         firstRowTime = lastRowTime - rraRowCount * step;
 
         // We assume that the RRAs are listed in ascending order of time range,
@@ -219,36 +213,30 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
         throw TypeError('Unrecognised consolidation function: ' + cfName);
     }
 
-    var startRowTime = Math.floor(startTime/step)*step + step;
-    var endRowTime = Math.floor(endTime/step)*step + step;
-
     var flotData = [];
-    var timestamp = startRowTime;
-
-    // Fill in any blank values at the start of the query, before we reach the
-    // first data in the chosen RRA
-    while(timestamp<=endRowTime && timestamp<firstRowTime) {
-        flotData.push([timestamp*1000.0, null]);
-        timestamp+=step
-    }
-
     var dsIndex = ds.getIdx();
-    var val
-    var i = rraRowCount - 1 - (lastRowTime - timestamp)  / step;
-    while(timestamp<=endRowTime && timestamp < lastRowTime) {
+
+    var startRowTime = startTime - startTime%step;
+    var endRowTime = endTime - endTime%step;
+
+    //console.log('FRT: ', new Date(startRowTime*1000));
+    //console.log('ERT: ', new Date(endRowTime*1000));
+    //console.log('LRT: ', new Date(lastRowTime*1000));
+    //console.log('DIFF: ', (lastRowTime - startRowTime) / step);
+    //console.log('ROWS: ', rraRowCount);
+
+    var startRowIndex = rraRowCount - (lastRowTime - startRowTime)  / step;
+    var endRowIndex = rraRowCount - (lastRowTime - endRowTime)  / step;
+
+    //console.log('SRI: ', startRowIndex);
+    //console.log('ERI: ', endRowIndex);
+
+    var val;
+    var timestamp = startRowTime;
+    for(var i=startRowIndex; i<endRowIndex; i++) {
         val = rra.getEl(i, dsIndex)
         flotData.push([timestamp*1000.0, val]);
-        i += 1;
         timestamp += step
-    }
-
-
-
-    // Fill in any blank values at the end of the query, after we've used all
-    // the data in the chosen RRA
-    while(timestamp<=endRowTime) {
-        flotData.push([timestamp*1000.0, null]);
-        timestamp+=step
     }
 
     // Now get the date of the earliest record in entire rrd file, ie that of

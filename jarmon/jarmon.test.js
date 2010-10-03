@@ -218,18 +218,60 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                 function(self, rrd) {
                     self.resume(function() {
                         var rq = new jarmon.RrdQuery(rrd, '');
-                        var data = rq.getData(RRD_STARTTIME, RRD_ENDTIME);
-                        Y.Assert.areEqual(RRD_RRAROWS+1, data.data.length);
-                        Y.Assert.areEqual(2, data.data[2][1]);
+
+                        // We request data starting 1 STEP +1s after the RRD file
+                        // first val and ending 1 STEP -1s before the RRD last val
+                        // ie one step within the RRD file, but 1s away from the
+                        // step boundary to test the quantisation of the
+                        // requested time range.
+                        var data = rq.getData(
+                            RRD_STARTTIME + (RRD_STEP+1) * 1000,
+                            RRD_ENDTIME - (RRD_STEP-1) * 1000);
+
+                        // so we expect two less rows than the total rows in the
+                        // file.
+                        Y.Assert.areEqual(RRD_RRAROWS-2, data.data.length);
+
+                        // The value of the first returned row should be the
+                        // second value in the RRD file (starts at value 0)
+                        Y.Assert.areEqual(1, data.data[0][1]);
+
+                        // The value of the last returned row should be the
+                        // 10 value in the RRD file (starts at value 0)
+                        Y.Assert.areEqual(10, data.data[data.data.length-1][1]);
+
+                        // The timestamp of the first returned row should be
+                        // exactly one step after the start of the RRD file
                         Y.Assert.areEqual(
                             RRD_STARTTIME+RRD_STEP*1000, data.data[0][0]);
+
+                        // RRD_ENDTIME is on a step boundary and is therfore
+                        // actually the start time of a new row
+                        // So when we ask for endTime = RRD_ENDTIME-STEP-1 we
+                        // actually get data up to the 2nd to last RRD row.
                         Y.Assert.areEqual(
-                            RRD_ENDTIME + RRD_STEP*1000,
+                            RRD_ENDTIME-RRD_STEP*1000*2,
                             data.data[data.data.length-1][0]);
                     });
                 }, this);
             this.wait();
         },
+
+        test_getDataUnknownValues: function () {
+            /**
+             * If the requested time range is outside the range of the RRD file
+             * we should not get any values back
+             **/
+            this.d.addCallback(
+                function(self, rrd) {
+                    self.resume(function() {
+                        var rq = new jarmon.RrdQuery(rrd, '');
+                        var data = rq.getData(RRD_ENDTIME, RRD_ENDTIME+1000);
+                        Y.Assert.areEqual(0, data.data.length);
+                    });
+                }, this);
+            this.wait();
+        }
 
     }));
 
@@ -242,7 +284,5 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         height: '400px'
     });
     yconsole.render('#log');
-
-    //run all tests
     Y.Test.Runner.run();
 });
