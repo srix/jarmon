@@ -276,6 +276,41 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     }));
 
 
+    Y.Test.Runner.add(new Y.Test.Case({
+        name: "jarmon.Chart",
+
+        XsetUp: function() {
+            this.d = new jarmon.downloadBinary('build/test.rrd')
+            .addCallback(
+                function(self, binary) {
+                    return new RRDFile(binary);
+                }, this)
+            .addErrback(
+                function(ret) {
+                    console.log(ret);
+                });
+        },
+
+        test_draw: function () {
+            /**
+             *
+             **/
+            var $tpl = $('<div><div class="chart"></div></div>').appendTo($('body'));
+            var c = new jarmon.Chart($tpl, {xaxis: {mode: "time"}});
+            //jarmon.Chart.BASE_OPTIONS
+            //c.options.xaxis.tzoffset = 0;
+            c.addData('speed', new jarmon.RrdQueryRemote('build/test.rrd', 'm/s'), true);
+            var d = c.setTimeRange(RRD_STARTTIME, RRD_ENDTIME);
+            d.addCallback(
+                function(self) {
+                    self.resume(function() {
+                        Y.Assert.areEqual(1, 1);
+                    });
+                }, this);
+            this.wait();
+        },
+    }));
+
 
     //initialize the console
     var yconsole = new Y.Console({
