@@ -216,14 +216,21 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
     var flotData = [];
     var dsIndex = ds.getIdx();
 
-    var startRowTime = startTime - startTime%step;
-    var endRowTime = endTime - endTime%step;
+    var startRowTime = Math.max(firstRowTime, startTime - startTime%step);
+    var endRowTime = Math.min(lastRowTime, endTime - endTime%step);
+    // If RRD exists, but hasn't been updated then the start time might end up
+    // being higher than the end time (which is capped at the last row time of
+    // the chosen RRA, so cap startTime at endTime...if you see what I mean)
+    startRowTime = Math.min(startRowTime, endRowTime);
 
-    //console.log('FRT: ', new Date(startRowTime*1000));
-    //console.log('ERT: ', new Date(endRowTime*1000));
-    //console.log('LRT: ', new Date(lastRowTime*1000));
-    //console.log('DIFF: ', (lastRowTime - startRowTime) / step);
-    //console.log('ROWS: ', rraRowCount);
+    /*
+    console.log('FRT: ', new Date(firstRowTime*1000));
+    console.log('LRT: ', new Date(lastRowTime*1000));
+    console.log('SRT: ', new Date(startRowTime*1000));
+    console.log('ERT: ', new Date(endRowTime*1000));
+    console.log('DIFF: ', (lastRowTime - startRowTime) / step);
+    console.log('ROWS: ', rraRowCount);
+    */
 
     var startRowIndex = rraRowCount - (lastRowTime - startRowTime)  / step;
     var endRowIndex = rraRowCount - (lastRowTime - endRowTime)  / step;
