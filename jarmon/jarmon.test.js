@@ -53,7 +53,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     var RRD_ENDTIME = new Date('1 jan 1980 00:02:00').getTime();
 
     Y.Test.Runner.add(new Y.Test.Case({
-        name: "javascriptrrd.RRDFile",
+        name: "jarmon.RRDFile",
 
         setUp: function() {
             this.d = new jarmon.downloadBinary('build/test.rrd')
@@ -296,9 +296,9 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
              *
              **/
             var $tpl = $('<div><div class="chart"></div></div>').appendTo($('body'));
-            var c = new jarmon.Chart($tpl, {xaxis: {mode: "time"}});
-            //jarmon.Chart.BASE_OPTIONS
-            //c.options.xaxis.tzoffset = 0;
+            var c = new jarmon.Chart($tpl, jarmon.Chart.BASE_OPTIONS);
+            //
+            c.options.xaxis.tzoffset = 0;
             c.addData('speed', new jarmon.RrdQueryRemote('build/test.rrd', 'm/s'), true);
             var d = c.setTimeRange(RRD_STARTTIME, RRD_ENDTIME);
             d.addCallback(
