@@ -279,21 +279,10 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     Y.Test.Runner.add(new Y.Test.Case({
         name: "jarmon.Chart",
 
-        XsetUp: function() {
-            this.d = new jarmon.downloadBinary('build/test.rrd')
-            .addCallback(
-                function(self, binary) {
-                    return new RRDFile(binary);
-                }, this)
-            .addErrback(
-                function(ret) {
-                    console.log(ret);
-                });
-        },
-
         test_draw: function () {
             /**
-             *
+             * Test that a rendered chart has the correct dimensions, legend,
+             * axis, labels etc
              **/
             var $tpl = $('<div><div class="chart"></div></div>').appendTo($('body'));
             var c = new jarmon.Chart($tpl, jarmon.Chart.BASE_OPTIONS);
@@ -304,7 +293,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             d.addCallback(
                 function(self) {
                     self.resume(function() {
-                        Y.Assert.areEqual(1, 1);
+                        // TODO: write useful tests
                     });
                 }, this);
             this.wait();
