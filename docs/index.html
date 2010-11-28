@@ -10,6 +10,7 @@
         <li><a href="#browser-compatibility">Browser Compatibility</a></li>
         <li><a href="#api-documentation">API documentation</a></li>
         <li><a href="#release-process">Release process and tools</a></li>
+        <li><a href="#automated-tests">Running automated tests</a></li>
     </ol>
     <h2 id="browser-compatibility">Browser Compatibility</h2>
     <p>Jarmon depends upon the <a href="http://code.google.com/p/flot/">Flot
@@ -46,7 +47,7 @@
         <dd>This is the default IE compatibility workaround. Jarmon bundles the
         <a href="http://code.google.com/p/explorercanvas/">excanvas library</a>
         which translates canvas api calls into VML, but this is much slower
-        than the native canvas support in other browsers. In the absense of
+        than the native canvas support in other browsers. In the absence of
         other workarounds, Jarmon will transparently use the excanvas library.
 
         <dt>Chrome Frame
@@ -92,3 +93,39 @@
     out the source code, then issue the
     <code>./bin/build -V 10.8 release</code> command from within the source
     tree.</p>
+
+    <h2 id="automated-tests">Running automated tests</h2>
+    <p>Jarmon includes unit tests which are used to exercise the library
+    code, to check for compatibility with various platforms and web client
+    software and to check for regressions as the library evolves.</p>
+    <p>The unit tests are designed to be run inside a web browser using the
+    <a href="http://developer.yahoo.com/yui/yuitest/">YUI test harness</a>.</p>
+    <ol>
+        <li>Generate test data by running the following command
+        <code>./bin/build testdata</code> from within the source tree.
+        <li>Start a web server to serve the test page. Eg
+        <code>$ nginx -p . -c docs/examples/nginx.conf.example</code></li>
+        <li>Use a web browser to load
+        <a href="http://localhost:8080/test.html">the test page</a>
+        (<a href="http://localhost:8080/test.html">
+        http://localhost:8080/test.html</a>)</li>
+    </ol>
+    <h3>Measure code coverage</h3>
+    <p>There are number of tools available to measure the
+    <a href="http://en.wikipedia.org/wiki/Code_coverage">code coverage</a> of
+    Javascript unit tests.</p>
+    <p>One such tool is <a href="http://siliconforks.com/jscoverage/">
+    JSCoverage</a>. It is very easy to install JSCoverage on a Debian / Ubuntu
+    system and use it to measure the coverage of the Jarmon unit tests.</p>
+    <ol>
+        <li><code>sudo aptitude install jscoverage</code> - install
+        jscoverage.</li>
+        <li><code>jscoverage-server</code> - run the JSCoverage web server from
+        the root of the Jarmon source tree.</li>
+        <li>Visit <a href="http://localhost:8080/jscoverage.html?test.html">
+        http://localhost:8080/jscoverage.html?test.html</a> to run the unit
+        tests through the JSCoverage server. The server will automatically
+        <a href="http://en.wikipedia.org/wiki/Instrumentation_%28computer_programming%29">
+        instrument</a> the Jarmon code and present a web interface which reports
+        how much of the code has been exercised.</li>
+    </ol>

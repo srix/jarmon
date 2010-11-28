@@ -27,6 +27,7 @@ if(typeof jarmon == 'undefined') {
     var jarmon = {};
 }
 
+
 jarmon.downloadBinary = function(url) {
     /**
      * Download a binary file asynchronously using the jQuery.ajax function
@@ -141,31 +142,36 @@ jarmon.RrdQuery = function(rrd, unit) {
     this.unit = unit;
 };
 
-jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
+jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfName) {
     /**
      * Generate a Flot compatible data object containing rows between start and
      * end time. The rows are taken from the first RRA whose data spans the
      * requested time range.
      *
      * @method getData
-     * @param startTime {Number} start timestamp
-     * @param endTime {Number} end timestamp
+     * @param startTimeJs {Number} start timestamp in microseconds
+     * @param endTimeJs {Number} end timestamp in microseconds
      * @param dsId {Variant} identifier of the RRD datasource (string or number)
      * @param cfName {String} The name of an RRD consolidation function (CF)
      *      eg AVERAGE, MIN, MAX
      * @return {Object} A Flot compatible data series
      *      eg label: '', data: [], unit: ''
      **/
-    var startTimestamp = startTime/1000;
 
+    if (startTimeJs >= endTimeJs) {
+        throw RangeError(
+            ['starttime must be less than endtime. ',
+             'starttime: ', startTimeJs,
+             'endtime: ', endTimeJs].join(''));
+    }
+
+    var startTime = startTimeJs/1000;
     var lastUpdated = this.rrd.getLastUpdate();
-    var endTimestamp = lastUpdated;
-    if(endTime) {
-        endTimestamp = endTime/1000;
-        // If end time stamp is beyond the range of this rrd then reset it
-        if(lastUpdated < endTimestamp) {
-            endTimestamp = lastUpdated;
-        }
+
+    // default endTime to the last updated time (quantized to rrd step boundry)
+    var endTime = lastUpdated - lastUpdated%this.rrd.getMinStep();
+    if(endTimeJs) {
+        endTime = endTimeJs/1000;
     }
 
     if(dsId == null) {
@@ -177,7 +183,7 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
         cfName = 'AVERAGE';
     }
 
-    var rra, step, rraRowCount, firstUpdated;
+    var rra, step, rraRowCount, lastRowTime, firstRowTime;
 
     for(var i=0; i<this.rrd.getNrRRAs(); i++) {
         // Look through all RRAs looking for the most suitable
@@ -191,29 +197,53 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
 
         step = rra.getStep();
         rraRowCount = rra.getNrRows();
-        firstUpdated = lastUpdated - (rraRowCount - 1) * step;
+        lastRowTime = lastUpdated-lastUpdated%step;
+        firstRowTime = lastRowTime - rraRowCount * step;
+
         // We assume that the RRAs are listed in ascending order of time range,
         // therefore the first RRA which contains the range minimum should give
         // the highest resolution data for this range.
-        if(firstUpdated <= startTimestamp) {
+        if(firstRowTime <= startTime) {
             break;
         }
     }
     // If we got to the end of the loop without ever defining step, it means
     // that the CF check never succeded.
     if(!step) {
-        throw new Error('Unrecognised consolidation function: ' + cfName);
+        throw TypeError('Unrecognised consolidation function: ' + cfName);
     }
 
-    var startRow = rraRowCount - parseInt((lastUpdated - Math.max(startTimestamp, firstUpdated))/step) - 1;
-    var endRow = rraRowCount - parseInt((lastUpdated - endTimestamp)/step) - 1;
-
     var flotData = [];
-    var timestamp = firstUpdated + (startRow - 1) * step;
     var dsIndex = ds.getIdx();
-    for (var i=startRow; i<=endRow; i++) {
-        flotData.push([timestamp*1000.0, rra.getEl(i, dsIndex)]);
-        timestamp += step;
+
+    var startRowTime = Math.max(firstRowTime, startTime - startTime%step);
+    var endRowTime = Math.min(lastRowTime, endTime - endTime%step);
+    // If RRD exists, but hasn't been updated then the start time might end up
+    // being higher than the end time (which is capped at the last row time of
+    // the chosen RRA, so cap startTime at endTime...if you see what I mean)
+    startRowTime = Math.min(startRowTime, endRowTime);
+
+    /*
+    console.log('FRT: ', new Date(firstRowTime*1000));
+    console.log('LRT: ', new Date(lastRowTime*1000));
+    console.log('SRT: ', new Date(startRowTime*1000));
+    console.log('ERT: ', new Date(endRowTime*1000));
+    console.log('DIFF: ', (lastRowTime - startRowTime) / step);
+    console.log('ROWS: ', rraRowCount);
+    */
+
+    var startRowIndex = rraRowCount - (lastRowTime - startRowTime)  / step;
+    var endRowIndex = rraRowCount - (lastRowTime - endRowTime)  / step;
+
+    //console.log('SRI: ', startRowIndex);
+    //console.log('ERI: ', endRowIndex);
+
+    var val;
+    var timestamp = startRowTime;
+    for(var i=startRowIndex; i<endRowIndex; i++) {
+        val = rra.getEl(i, dsIndex)
+        flotData.push([timestamp*1000.0, val]);
+        timestamp += step
     }
 
     // Now get the date of the earliest record in entire rrd file, ie that of
@@ -240,7 +270,7 @@ jarmon.RrdQuery.prototype.getData = function(startTime, endTime, dsId, cfName) {
 jarmon.RrdQueryRemote = function(url, unit, downloader) {
     this.url = url;
     this.unit = unit;
-    this.downloader = downloader;
+    this.downloader = downloader || jarmon.downloadBinary;
     this.lastUpdate = 0;
     this._download = null;
 };
@@ -498,6 +528,9 @@ jarmon.Chart.prototype.draw = function() {
     return MochiKit.Async.gatherResults(results)
             .addCallback(
                 function(self, data) {
+                    // Clear any previous error messages.
+                    self.template.find('.error').empty().hide();
+
                     var i, label, disabled = [];
                     unit = '';
                     for(i=0; i<data.length; i++) {
@@ -514,7 +547,7 @@ jarmon.Chart.prototype.draw = function() {
                         }
                     }
 
-                    $.plot(self.template.find('.chart'), data, self.options);
+                    $.plot(self.template.find('.chart').empty().show(), data, self.options);
 
                     var yaxisUnitLabel = $('<div>').text(self.siPrefix + unit)
                                                    .css({width: '100px',
@@ -533,7 +566,7 @@ jarmon.Chart.prototype.draw = function() {
                     // table is useful as it generates an optimum label element
                     // width which we can copy to the new divs + a little extra
                     // to accomodate the color box
-                    var legend = self.template.find('.graph-legend');
+                    var legend = self.template.find('.graph-legend').show();
                     legend.empty();
                     self.template.find('.legendLabel')
                         .each(function(i, el) {
@@ -562,7 +595,10 @@ jarmon.Chart.prototype.draw = function() {
                 }, this)
             .addErrback(
                 function(self, failure) {
-                    self.template.text('error: ' + failure.message);
+                    self.template.find('.chart').empty().hide();
+                    self.template.find('.graph-legend').empty().hide();
+                    self.template.find('.error').text('error: ' + failure.message);
+
                 }, this)
             .addBoth(
                 function(self, res) {

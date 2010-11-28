@@ -8,7 +8,9 @@ import logging
 import os
 import shutil
 import sys
+import time
 
+from datetime import datetime
 from optparse import OptionParser
 from subprocess import check_call, PIPE
 from tempfile import gettempdir
@@ -34,13 +36,9 @@ class BuildError(Exception):
 
 
 class BuildCommand(object):
-    def __init__(self, buildversion, log=None):
-        self.buildversion = buildversion
-        if log is not None:
-            self.log = log
-        else:
-            self.log = logging.getLogger(
-                '%s.%s' % (__name__, self.__class__.__name__))
+    def __init__(self):
+        self.log = logging.getLogger(
+            '%s.%s' % (__name__, self.__class__.__name__))
 
         self.workingbranch_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), '..'))
@@ -60,12 +58,26 @@ class BuildApidocsCommand(BuildCommand):
     Download YUI Doc and use it to generate apidocs for jarmon
     """
 
+    command_name = 'apidocs'
+
     def main(self, argv):
         """
         The main entry point for the build-apidocs command
 
         @param argv: The list of arguments passed to the build-apidocs command
         """
+
+        parser = OptionParser(
+            usage='build [options] %s VERSION' % (self.command_name,))
+        parser.disable_interspersed_args()
+        options, args = parser.parse_args(argv)
+
+        if len(args) != 1:
+            parser.error('Wrong number of arguments. This command expects a '
+                         'version number only.')
+
+        buildversion = args[0]
+
         tmpdir = gettempdir()
         workingbranch_dir = self.workingbranch_dir
         build_dir = self.build_dir
@@ -131,7 +143,7 @@ class BuildApidocsCommand(BuildCommand):
             '--template=%s' % (
                 os.path.join(
                     workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),),
-            '--version=%s' % (self.buildversion,),
+            '--version=%s' % (buildversion,),
             '--project=%s' % (JARMON_PROJECT_TITLE,),
             '--projecturl=%s' % (JARMON_PROJECT_URL,)
         ), stdout=PIPE, stderr=PIPE,)
@@ -145,7 +157,21 @@ class BuildReleaseCommand(BuildCommand):
     upload to Launchpad.
     """
 
+    command_name = 'release'
+
     def main(self, argv):
+
+        parser = OptionParser(
+            usage='build [options] %s VERSION' % (self.command_name,))
+        parser.disable_interspersed_args()
+        options, args = parser.parse_args(argv)
+
+        if len(args) != 1:
+            parser.error('Wrong number of arguments. This command expects a '
+                         'version number only.')
+
+        buildversion = args[0]
+
         workingbranch_dir = self.workingbranch_dir
         build_dir = self.build_dir
 
@@ -167,11 +193,11 @@ class BuildReleaseCommand(BuildCommand):
 
 
         self.log.debug('Generate apidocs')
-        BuildApidocsCommand(buildversion=self.buildversion).main(argv)
+        BuildApidocsCommand().main([buildversion])
 
 
         self.log.debug('Generate archive')
-        archive_root = 'jarmon-%s' % (self.buildversion,)
+        archive_root = 'jarmon-%s' % (buildversion,)
         prefix_len = len(build_dir) + 1
         z = ZipFile('%s.zip' % (archive_root,), 'w', ZIP_DEFLATED)
         try:
@@ -185,11 +211,54 @@ class BuildReleaseCommand(BuildCommand):
             z.close()
 
 
-# The available sub commands
-build_commands = {
-    'apidocs': BuildApidocsCommand,
-    'release': BuildReleaseCommand,
-}
+class BuildTestDataCommand(BuildCommand):
+    """
+    Create data for use in unittests
+    """
+
+    command_name = 'testdata'
+
+    def main(self, argv):
+        """
+        Create an RRD file with values 0-9 entered at 1 second intervals from
+        1980-01-01 00:00:00 (the first date that rrdtool allows)
+        """
+        from datetime import datetime
+        from pyrrd.rrd import DataSource, RRA, RRD
+        start = int(datetime(1980, 1, 1, 0, 0).strftime('%s'))
+        dss = []
+        rras = []
+        filename = os.path.join(self.build_dir, 'test.rrd')
+
+        rows = 12
+        step = 10
+
+        dss.append(DataSource(dsName='speed', dsType='GAUGE', heartbeat=2*step))
+        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=rows))
+        rras.append(RRA(cf='AVERAGE', xff=0.5, steps=12, rows=rows))
+        my_rrd = RRD(filename, ds=dss, rra=rras, start=start, step=step)
+        my_rrd.create()
+
+        for i, t in enumerate(range(start+step, start+step+(rows*step), step)):
+            self.log.debug('DATA: %s %s (%s)' % (t, i, datetime.fromtimestamp(t)))
+            my_rrd.bufferValue(t, i)
+
+        # Add further data 1 second later to demonstrate that the rrd
+        # lastupdatetime does not necessarily fall on a step boundary
+        t += 1
+        i += 1
+        self.log.debug('DATA: %s %s (%s)' % (t, i, datetime.fromtimestamp(t)))
+        my_rrd.bufferValue(t, i)
+
+        my_rrd.update()
+
+
+# The available subcommands
+SUBCOMMAND_HANDLERS = [
+    BuildApidocsCommand,
+    BuildReleaseCommand,
+    BuildTestDataCommand,
+]
 
 
 def main(argv=sys.argv[1:]):
@@ -197,10 +266,13 @@ def main(argv=sys.argv[1:]):
     The root build command which dispatches to various subcommands for eg
     building apidocs and release zip files.
     """
-    parser = OptionParser(usage='%prog [options] SUBCOMMAND [options]')
-    parser.add_option(
-        '-V', '--build-version', dest='buildversion', default='0',
-        metavar='BUILDVERSION', help='Specify the build version')
+
+    build_commands = dict(
+        (handler.command_name, handler) for handler in SUBCOMMAND_HANDLERS)
+
+    parser = OptionParser(
+        usage='build [options] SUBCOMMAND [options]',
+        description='Available subcommands are: %r' % (build_commands.keys(),))
     parser.add_option(
         '-d', '--debug', action='store_true', default=False, dest='debug',
         help='Print verbose debug log to stderr')
@@ -236,4 +308,4 @@ def main(argv=sys.argv[1:]):
         log.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
 
-    command_factory(buildversion=options.buildversion).main(argv=args)
+    command_factory().main(argv=args)
