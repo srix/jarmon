@@ -702,14 +702,18 @@ jarmon.ChartConfig.prototype.draw = function() {
     this.$tpl.empty();
 
     $(this.errors).map(function(i, el) {
-        return $('<p/>').text(el.toString());
+        return $('<p/>', {'class': 'error'}).text(el.toString());
     }).appendTo(this.$tpl);
 
     var $f = $('<form/>')
     $('<div/>').append(
         $('<label/>').append(
             ['URL', ': '].join(''),
-            $('<input/>', {name: 'rrd_url', value: this.rrdUrl})
+            $('<input/>', {
+                type: 'text',
+                name: 'rrd_url',
+                value: this.rrdUrl
+            })
         )
     ).appendTo($f);
 
@@ -717,7 +721,7 @@ jarmon.ChartConfig.prototype.draw = function() {
         return $('<label/>').append(
             [el, ': '].join(''),
             $('<input/>', {
-                type: 'checkbox',
+                type: 'text',
                 name: 'rrd_ds',
                 value: el
             })

@@ -403,13 +403,46 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     Y.Test.Runner.add(new Y.Test.Case({
         name: "jarmon.ChartConfig",
 
-        test_draw: function () {
-            /**
-             * Test that a rendered chart has the correct dimensions, legend,
-             * axis, labels etc
-             **/
-            var c = new jarmon.ChartConfig($('<div/>').appendTo($('body')));
+        setUp: function() {
+            this.$tpl = $('<div/>').appendTo($('body'))
+            var c = new jarmon.ChartConfig(this.$tpl);
             c.draw();
+        },
+
+        test_drawInitialForm: function () {
+            /**
+             * Test that the initial config form contains an rrd form field
+             **/
+            Y.Assert.areEqual(
+                this.$tpl.find('form input[name=rrd_url]').size(), 1);
+        },
+
+        test_drawUrlErrorMessage: function () {
+            /**
+             * Test that submitting the form with an incorrect url results in
+             * an error message
+             **/
+            var self = this;
+            this.$tpl.find('form input[name=rrd_url]').val('Foo/Bar').submit();
+            this.wait(
+                function() {
+                    Y.Assert.areEqual(self.$tpl.find('.error').size(), 1);
+                }, 1000
+            );
+        },
+
+        test_drawUrlListDatasources: function () {
+            /**
+             * Test that submitting the form with an correct rrd url results in
+             * list of further DS  label fields
+             **/
+            var self = this;
+            this.$tpl.find('form input[name=rrd_url]').val('build/test.rrd').submit();
+            this.wait(
+                function() {
+                    Y.Assert.areEqual(self.$tpl.find('input[name=rrd_ds]').size(), 1);
+                }, 1000
+            );
         },
     }));
 
