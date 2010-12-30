@@ -693,68 +693,107 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
 jarmon.ChartConfig = function($tpl) {
     this.$tpl = $tpl;
     this.rrdUrl = '';
-    this.dsNames = [];
-    this.errors = [];
+    this.dsName = '';
+    this.dsLabel = '';
+    this.dsUnit = '';
 };
 
-jarmon.ChartConfig.prototype.draw = function() {
+jarmon.ChartConfig.prototype.drawRrdUrlForm = function() {
     var self = this;
     this.$tpl.empty();
 
-    $(this.errors).map(function(i, el) {
-        return $('<p/>', {'class': 'error'}).text(el.toString());
-    }).appendTo(this.$tpl);
+    var $f = $('<form/>');
 
-    var $f = $('<form/>')
     $('<div/>').append(
+        $('<p/>').text('Enter the URL of an RRD file'),
         $('<label/>').append(
             ['URL', ': '].join(''),
             $('<input/>', {
                 type: 'text',
                 name: 'rrd_url',
                 value: this.rrdUrl
-            })
+            }),
+            $('<input/>', {type: 'submit', value: 'download'}),
+            $('<div/>', {class: 'next'})
         )
-    ).appendTo($f);
-
-    $(this.dsNames).map(function(i, el) {
-        return $('<label/>').append(
-            [el, ': '].join(''),
-            $('<input/>', {
-                type: 'text',
-                name: 'rrd_ds',
-                value: el
-            })
-        )
-    }).appendTo($f);
-
-    $('<div/>').append(
-        $('<input/>', {type: 'submit', value: 'submit'})
     ).appendTo($f);
 
     $f.submit(
         function(e) {
             self.rrdUrl = this['rrd_url'].value;
-            self.$tpl.empty();
-            self.dsNames = [];
-            self.errors = [];
-            new jarmon.RrdQueryRemote(self.rrdUrl).getDSNames().addCallbacks(
-                function(dsNames) {
-                    self.dsNames = dsNames;
-                },
-                function(err) {
-                    self.errors.push(err);
-                }
-            ).addBoth(
-                function() {
-                    self.draw();
-                }
+            $placeholder = $(this).find('.next').empty();
+            var rq = new jarmon.RrdQueryRemote(self.rrdUrl);
+            rq.getDSNames().addCallback(
+                function($placeholder, dsNames) {
+                    if(dsNames.length > 1) {
+                        $('<p/>').text('The RRD file contains multiple data sources. Choose one:').appendTo($placeholder);
+                        $(dsNames).map(
+                            function(i, el) {
+                                return $('<input/>', {
+                                    type: 'button',
+                                    value: el
+                                }
+                            ).click(
+                                function(e) {
+                                    self.dsName = this.value;
+                                    self.drawDsLabelForm();
+                                }
+                            );
+                        }).appendTo($placeholder);
+                    } else {
+                        self.dsName = dsNames[0];
+                        self.drawDsLabelForm();
+                    }
+                }, $placeholder
+            ).addErrback(
+                function($placeholder, err) {
+                    $('<p/>', {'class': 'error'}).text(err.toString()).appendTo($placeholder);
+                }, $placeholder
             );
             return false;
         }
-    ).appendTo(this.$tpl);
+    );
+
+    $f.appendTo(this.$tpl);
 }
 
+jarmon.ChartConfig.prototype.drawDsLabelForm = function() {
+    var self = this;
+    this.$tpl.empty();
+
+    $('<form/>').append(
+        $('<p/>').text('Choose a label and unit for this data source.'),
+        $('<div/>').append(
+            $('<label/>').append(
+                ['Label', ': '].join(''),
+                $('<input/>', {
+                    type: 'text',
+                    name: 'dsLabel',
+                    value: this.dslabel || this.dsName
+                })
+            )
+        ),
+        $('<div/>').append(
+            $('<label/>').append(
+                ['Unit', ': '].join(''),
+                $('<input/>', {
+                    type: 'text',
+                    name: 'dsUnit',
+                    value: this.dsUnit
+                })
+            )
+        ),
+        $('<input/>', {type: 'submit', value: 'save'}),
+        $('<div/>', {class: 'next'})
+    ).submit(
+        function(e) {
+            self.dsLabel = this['dsLabel'].value;
+            self.dsUnit = this['dsUnit'].value;
+            return false;
+        }
+    ).appendTo(this.$tpl);
+
+};
 
 
 // Options common to all the chart on this page

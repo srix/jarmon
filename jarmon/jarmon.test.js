@@ -406,7 +406,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         setUp: function() {
             this.$tpl = $('<div/>').appendTo($('body'))
             var c = new jarmon.ChartConfig(this.$tpl);
-            c.draw();
+            c.drawRrdUrlForm();
         },
 
         test_drawInitialForm: function () {
@@ -440,7 +440,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             this.$tpl.find('form input[name=rrd_url]').val('build/test.rrd').submit();
             this.wait(
                 function() {
-                    Y.Assert.areEqual(self.$tpl.find('input[name=rrd_ds]').size(), 1);
+                    Y.Assert.areEqual(self.$tpl.find('input[name=rrd_ds_label]').size(), 1);
                 }, 1000
             );
         },
