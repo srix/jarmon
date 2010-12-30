@@ -316,7 +316,7 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
 };
 
 
-jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
+jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId, cfName) {
     /**
      * Return a Flot compatible data series asynchronously.
      *
@@ -329,7 +329,7 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     if(this.lastUpdate < endTime/1000) {
         this._download = null;
     }
-    return this._callRemote('getData', [startTime, endTime, dsId]);
+    return this._callRemote('getData', [startTime, endTime, dsId, cfName]);
 };
 
 /**
