@@ -275,23 +275,11 @@ jarmon.RrdQueryRemote = function(url, unit, downloader) {
     this._download = null;
 };
 
-jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
-    /**
-     * Return a Flot compatible data series asynchronously.
-     *
-     * @method getData
-     * @param startTime {Number} The start timestamp
-     * @param endTime {Number} The end timestamp
-     * @param dsId {Variant} identifier of the RRD datasource (string or number)
-     * @return {Object} A Deferred which calls back with a flot data series.
-     **/
-    var endTimestamp = endTime/1000;
 
-    // Download the rrd if there has never been a download or if the last
-    // completed download had a lastUpdated timestamp less than the requested
-    // end time.
-    // Don't start another download if one is already in progress.
-    if(!this._download || (this._download.fired > -1 && this.lastUpdate < endTimestamp )) {
+jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
+    // Download the rrd if there has never been a download and don't start
+    // another download if one is already in progress.
+    if(!this._download) {
         this._download = this.downloader(this.url)
                 .addCallback(
                     function(self, binary) {
@@ -307,9 +295,10 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     // Set up a deferred which will call getData on the local RrdQuery object
     // returning a flot compatible data object to the caller.
     var ret = new MochiKit.Async.Deferred().addCallback(
-        function(self, startTime, endTime, dsId, rrd) {
-            return new jarmon.RrdQuery(rrd, self.unit).getData(startTime, endTime, dsId);
-        }, this, startTime, endTime, dsId);
+        function(self, methodName, args, rrd) {
+            var rq = new jarmon.RrdQuery(rrd, self.unit);
+            return rq[methodName].apply(rq, args);
+        }, this, methodName, args);
 
     // Add a pair of callbacks to the current download which will callback the
     // result which we setup above.
@@ -324,6 +313,23 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
         }, ret);
 
     return ret;
+};
+
+
+jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
+    /**
+     * Return a Flot compatible data series asynchronously.
+     *
+     * @method getData
+     * @param startTime {Number} The start timestamp
+     * @param endTime {Number} The end timestamp
+     * @param dsId {Variant} identifier of the RRD datasource (string or number)
+     * @return {Object} A Deferred which calls back with a flot data series.
+     **/
+    if(this.lastUpdate < endTime/1000) {
+        this._download = null;
+    }
+    return this._callRemote('getData', [startTime, endTime, dsId]);
 };
 
 /**
@@ -652,6 +658,46 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
     }
     return charts;
 };
+
+
+/**
+ * Generate a form through which to manipulate the data sources for a chart
+ *
+ * @class jarmon.ChartConfig
+ * @constructor
+ **/
+jarmon.ChartConfig = function($tpl) {
+    this.$tpl = $tpl;
+};
+
+jarmon.ChartConfig.prototype.draw = function() {
+    $('<form/>').append(
+        $('<div/>').append(
+            $('<label/>').append(
+                ['URL', ': '].join(''),
+                $('<input/>', {name: 'rrd_url'})
+            )
+        ),
+        $('<div/>').append(
+            $('<input/>', {type: 'submit', value: 'submit'})
+        )
+    ).submit(
+        function(e) {
+            var d = new jarmon.RrdQueryRemote(this['rrd_url'])
+            $(this).append(
+                $('<div/>').append(
+                    $('<label/>').append(
+                        ['DS', ': '].join(''),
+                        $('<input/>', {name: 'rrd_ds'})
+                    )
+                )
+            );
+
+            return false;
+        }
+    ).appendTo(this.$tpl);
+}
+
 
 
 // Options common to all the chart on this page

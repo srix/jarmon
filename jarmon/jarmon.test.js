@@ -301,6 +301,20 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     }));
 
 
+    Y.Test.Runner.add(new Y.Test.Case({
+        name: "jarmon.ChartConfig",
+
+        test_draw: function () {
+            /**
+             * Test that a rendered chart has the correct dimensions, legend,
+             * axis, labels etc
+             **/
+            var c = new jarmon.ChartConfig($('<div/>').appendTo($('body')));
+            c.draw();
+        },
+    }));
+
+
     //initialize the console
     var yconsole = new Y.Console({
         newestOnTop: false,
