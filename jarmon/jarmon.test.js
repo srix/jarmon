@@ -280,7 +280,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         name: "jarmon.RrdQueryRemote",
 
         setUp: function() {
-            this.rq = new jarmon.RrdQueryRemote('build/test.rrd', '')
+            this.rq = new jarmon.RrdQueryRemote('build/test.rrd', '');
         },
 
         test_getDataTimeRangeOverlapError: function () {

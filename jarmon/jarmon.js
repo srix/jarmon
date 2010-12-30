@@ -256,6 +256,18 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
             'lastUpdated': lastUpdated*1000.0};
 };
 
+
+jarmon.RrdQuery.prototype.getDSNames = function() {
+    /**
+     * Return a list of RRD Data Source names
+     *
+     * @method getDSNames
+     * @return {Array} An array of DS names.
+     **/
+    return this.rrd.getDSNames();
+};
+
+
 /**
  * A wrapper around RrdQuery which provides asynchronous access to the data in a
  * remote RRD file.
@@ -331,6 +343,18 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId, cfN
     }
     return this._callRemote('getData', [startTime, endTime, dsId, cfName]);
 };
+
+
+jarmon.RrdQueryRemote.prototype.getDSNames = function() {
+    /**
+     * Return a list of RRD Data Source names
+     *
+     * @method getDSNames
+     * @return {Object} A Deferred which calls back with an array of DS names.
+     **/
+    return this._callRemote('getDSNames');
+};
+
 
 /**
  * Wraps RrdQueryRemote to provide access to a different RRD DSs within a
@@ -668,31 +692,60 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
  **/
 jarmon.ChartConfig = function($tpl) {
     this.$tpl = $tpl;
+    this.rrdUrl = '';
+    this.dsNames = [];
+    this.errors = [];
 };
 
 jarmon.ChartConfig.prototype.draw = function() {
-    $('<form/>').append(
-        $('<div/>').append(
-            $('<label/>').append(
-                ['URL', ': '].join(''),
-                $('<input/>', {name: 'rrd_url'})
-            )
-        ),
-        $('<div/>').append(
-            $('<input/>', {type: 'submit', value: 'submit'})
-        )
-    ).submit(
-        function(e) {
-            var d = new jarmon.RrdQueryRemote(this['rrd_url'])
-            $(this).append(
-                $('<div/>').append(
-                    $('<label/>').append(
-                        ['DS', ': '].join(''),
-                        $('<input/>', {name: 'rrd_ds'})
-                    )
-                )
-            );
+    var self = this;
+    this.$tpl.empty();
 
+    $(this.errors).map(function(i, el) {
+        return $('<p/>').text(el.toString());
+    }).appendTo(this.$tpl);
+
+    var $f = $('<form/>')
+    $('<div/>').append(
+        $('<label/>').append(
+            ['URL', ': '].join(''),
+            $('<input/>', {name: 'rrd_url', value: this.rrdUrl})
+        )
+    ).appendTo($f);
+
+    $(this.dsNames).map(function(i, el) {
+        return $('<label/>').append(
+            [el, ': '].join(''),
+            $('<input/>', {
+                type: 'checkbox',
+                name: 'rrd_ds',
+                value: el
+            })
+        )
+    }).appendTo($f);
+
+    $('<div/>').append(
+        $('<input/>', {type: 'submit', value: 'submit'})
+    ).appendTo($f);
+
+    $f.submit(
+        function(e) {
+            self.rrdUrl = this['rrd_url'].value;
+            self.$tpl.empty();
+            self.dsNames = [];
+            self.errors = [];
+            new jarmon.RrdQueryRemote(self.rrdUrl).getDSNames().addCallbacks(
+                function(dsNames) {
+                    self.dsNames = dsNames;
+                },
+                function(err) {
+                    self.errors.push(err);
+                }
+            ).addBoth(
+                function() {
+                    self.draw();
+                }
+            );
             return false;
         }
     ).appendTo(this.$tpl);
