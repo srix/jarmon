@@ -685,12 +685,12 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
 
 
 /**
- * Generate a form through which to manipulate the data sources for a chart
+ * Generate a form through which to choose a data source from a remote RRD file
  *
- * @class jarmon.ChartConfig
+ * @class jarmon.RrdChooser
  * @constructor
  **/
-jarmon.ChartConfig = function($tpl) {
+jarmon.RrdChooser = function($tpl) {
     this.$tpl = $tpl;
     this.data = {
         rrdUrl: '',
@@ -700,7 +700,7 @@ jarmon.ChartConfig = function($tpl) {
     };
 };
 
-jarmon.ChartConfig.prototype.drawRrdUrlForm = function() {
+jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
     var self = this;
     this.$tpl.empty();
 
@@ -757,7 +757,7 @@ jarmon.ChartConfig.prototype.drawRrdUrlForm = function() {
     ).appendTo(this.$tpl);
 }
 
-jarmon.ChartConfig.prototype.drawDsLabelForm = function() {
+jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
     var self = this;
     this.$tpl.empty();
 
@@ -801,7 +801,7 @@ jarmon.ChartConfig.prototype.drawDsLabelForm = function() {
 };
 
 
-jarmon.ChartConfig.prototype.drawDsSummary = function() {
+jarmon.RrdChooser.prototype.drawDsSummary = function() {
     var self = this;
     this.$tpl.empty();
 

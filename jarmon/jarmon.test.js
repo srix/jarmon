@@ -401,11 +401,11 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
 
 
     Y.Test.Runner.add(new Y.Test.Case({
-        name: "jarmon.ChartConfig",
+        name: "jarmon.RrdChooser",
 
         setUp: function() {
             this.$tpl = $('<div/>').appendTo($('body'))
-            var c = new jarmon.ChartConfig(this.$tpl);
+            var c = new jarmon.RrdChooser(this.$tpl);
             c.drawRrdUrlForm();
         },
 
