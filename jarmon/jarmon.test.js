@@ -447,6 +447,25 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
     }));
 
 
+    Y.Test.Runner.add(new Y.Test.Case({
+        name: "jarmon.ChartEditor",
+
+        setUp: function() {
+            this.$tpl = $('<div/>').appendTo($('body'))
+            var c = new jarmon.ChartEditor(this.$tpl);
+            c.drawChartEditForm();
+        },
+
+        test_drawInitialForm: function () {
+            /**
+             * Test that the initial config form contains an rrd form field
+             **/
+            Y.Assert.areEqual(
+                this.$tpl.find('form input[name=rrd_url]').size(), 1);
+        }
+    }));
+
+
     //initialize the console
     var yconsole = new Y.Console({
         newestOnTop: false,

@@ -823,6 +823,73 @@ jarmon.RrdChooser.prototype.drawDsSummary = function() {
 };
 
 
+jarmon.ChartEditor = function($tpl) {
+    this.$tpl = $tpl;
+    this.data = {
+        title: '',
+        datasources: [
+            ['data/cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', '%'],
+            ['data/cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', '%'],
+            ['data/cpu-0/cpu-system.rrd', 0, 'CPU-0 System', '%'],
+            ['data/cpu-1/cpu-system.rrd', 0, 'CPU-1 System', '%'],
+            ['data/cpu-0/cpu-user.rrd', 0, 'CPU-0 User', '%'],
+            ['data/cpu-1/cpu-user.rrd', 0, 'CPU-1 User', '%']
+        ]
+    };
+};
+
+jarmon.ChartEditor.prototype.drawChartEditForm = function() {
+    var self = this;
+    this.$tpl.empty();
+
+    $('<form/>').append(
+        $('<div/>').append(
+            $('<label/>').append(
+                'Title: ',
+                $('<input/>', {
+                    type: 'text',
+                    name: 'title',
+                    value: this.data.title
+                })
+            )
+        ),
+        $('<fieldset/>').append(
+            $('<legend/>').text('Data Sources'),
+            $('<table/>', {'class': 'datasources'}).append(
+                $('<thead/>').append(
+                    $('<tr/>').append(
+                        $('<th/>').text('RRD File'),
+                        $('<th/>').text('DS Name'),
+                        $('<th/>').text('DS Label'),
+                        $('<th/>').text('DS Unit'),
+                        $('<th/>')
+                    )
+                )
+            ),
+            $('<input/>', {type: 'button', value: 'Add'})
+        ),
+        $('<input/>', {type: 'submit', value: 'Save'}),
+        $('<div/>', {class: 'next'})
+
+    ).appendTo(this.$tpl);
+
+    $(this.data.datasources).map(
+        function(i, el) {
+            return $('<tr/>').append(
+                $('<td/>').text(el[0]),
+                $('<td/>').text(el[1]),
+                $('<td/>').text(el[2]),
+                $('<td/>').text(el[3]),
+                $('<td/>').append(
+                    $('<input/>', {type: 'button', value: 'edit'}),
+                    $('<input/>', {type: 'button', value: 'delete'})
+                )
+            );
+        }
+    ).appendTo(this.$tpl.find('.datasources'));
+};
+
+
 // Options common to all the chart on this page
 jarmon.Chart.BASE_OPTIONS = {
     grid: {
