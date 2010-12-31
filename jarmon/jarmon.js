@@ -692,41 +692,43 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
  **/
 jarmon.ChartConfig = function($tpl) {
     this.$tpl = $tpl;
-    this.rrdUrl = '';
-    this.dsName = '';
-    this.dsLabel = '';
-    this.dsUnit = '';
+    this.data = {
+        rrdUrl: '',
+        dsName: '',
+        dsLabel: '',
+        dsUnit:''
+    };
 };
 
 jarmon.ChartConfig.prototype.drawRrdUrlForm = function() {
     var self = this;
     this.$tpl.empty();
 
-    var $f = $('<form/>');
-
-    $('<div/>').append(
-        $('<p/>').text('Enter the URL of an RRD file'),
-        $('<label/>').append(
-            ['URL', ': '].join(''),
-            $('<input/>', {
-                type: 'text',
-                name: 'rrd_url',
-                value: this.rrdUrl
-            }),
+    $('<form/>').append(
+        $('<div/>').append(
+            $('<p/>').text('Enter the URL of an RRD file'),
+            $('<label/>').append(
+                'URL: ',
+                $('<input/>', {
+                    type: 'text',
+                    name: 'rrd_url',
+                    value: this.data.rrdUrl
+                })
+            ),
             $('<input/>', {type: 'submit', value: 'download'}),
             $('<div/>', {class: 'next'})
         )
-    ).appendTo($f);
-
-    $f.submit(
+    ).submit(
         function(e) {
-            self.rrdUrl = this['rrd_url'].value;
+            self.data.rrdUrl = this['rrd_url'].value;
             $placeholder = $(this).find('.next').empty();
-            var rq = new jarmon.RrdQueryRemote(self.rrdUrl);
-            rq.getDSNames().addCallback(
+            new jarmon.RrdQueryRemote(self.data.rrdUrl).getDSNames().addCallback(
                 function($placeholder, dsNames) {
                     if(dsNames.length > 1) {
-                        $('<p/>').text('The RRD file contains multiple data sources. Choose one:').appendTo($placeholder);
+                        $('<p/>').text(
+                            'The RRD file contains multiple data sources. \
+                             Choose one:').appendTo($placeholder);
+
                         $(dsNames).map(
                             function(i, el) {
                                 return $('<input/>', {
@@ -735,13 +737,13 @@ jarmon.ChartConfig.prototype.drawRrdUrlForm = function() {
                                 }
                             ).click(
                                 function(e) {
-                                    self.dsName = this.value;
+                                    self.data.dsName = this.value;
                                     self.drawDsLabelForm();
                                 }
                             );
                         }).appendTo($placeholder);
                     } else {
-                        self.dsName = dsNames[0];
+                        self.data.dsName = dsNames[0];
                         self.drawDsLabelForm();
                     }
                 }, $placeholder
@@ -752,9 +754,7 @@ jarmon.ChartConfig.prototype.drawRrdUrlForm = function() {
             );
             return false;
         }
-    );
-
-    $f.appendTo(this.$tpl);
+    ).appendTo(this.$tpl);
 }
 
 jarmon.ChartConfig.prototype.drawDsLabelForm = function() {
@@ -765,34 +765,61 @@ jarmon.ChartConfig.prototype.drawDsLabelForm = function() {
         $('<p/>').text('Choose a label and unit for this data source.'),
         $('<div/>').append(
             $('<label/>').append(
-                ['Label', ': '].join(''),
+                'Label: ',
                 $('<input/>', {
                     type: 'text',
                     name: 'dsLabel',
-                    value: this.dslabel || this.dsName
+                    value: this.data.dslabel || this.data.dsName
                 })
             )
         ),
         $('<div/>').append(
             $('<label/>').append(
-                ['Unit', ': '].join(''),
+                'Unit: ',
                 $('<input/>', {
                     type: 'text',
                     name: 'dsUnit',
-                    value: this.dsUnit
+                    value: this.data.dsUnit
                 })
             )
+        ),
+        $('<input/>', {type: 'button', value: 'back'}).click(
+            function(e) {
+                self.drawRrdUrlForm();
+            }
         ),
         $('<input/>', {type: 'submit', value: 'save'}),
         $('<div/>', {class: 'next'})
     ).submit(
         function(e) {
-            self.dsLabel = this['dsLabel'].value;
-            self.dsUnit = this['dsUnit'].value;
+            self.data.dsLabel = this['dsLabel'].value;
+            self.data.dsUnit = this['dsUnit'].value;
+            self.drawDsSummary();
             return false;
         }
     ).appendTo(this.$tpl);
+};
 
+
+jarmon.ChartConfig.prototype.drawDsSummary = function() {
+    var self = this;
+    this.$tpl.empty();
+
+    jQuery.each(this.data, function(i, el) {
+        $('<p/>').append(
+            $('<strong/>').text(i),
+            [': ', el].join('')
+        ).appendTo(self.$tpl);
+    });
+
+    this.$tpl.append(
+        $('<input/>', {type: 'button', value: 'back'}).click(
+            function(e) {
+                self.drawDsLabelForm();
+            }
+        ),
+        $('<input/>', {type: 'button', value: 'finish'})
+    );
 };
 
 
