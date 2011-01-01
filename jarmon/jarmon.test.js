@@ -452,7 +452,20 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
 
         setUp: function() {
             this.$tpl = $('<div/>').appendTo($('body'))
-            var c = new jarmon.ChartEditor(this.$tpl);
+            var c = new jarmon.ChartEditor(
+                this.$tpl,
+                {
+                    title: 'Foo',
+                    datasources: [
+                        ['data/cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', '%'],
+                        ['data/cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', '%'],
+                        ['data/cpu-0/cpu-system.rrd', 0, 'CPU-0 System', '%'],
+                        ['data/cpu-1/cpu-system.rrd', 0, 'CPU-1 System', '%'],
+                        ['data/cpu-0/cpu-user.rrd', 0, 'CPU-0 User', '%'],
+                        ['data/cpu-1/cpu-user.rrd', 0, 'CPU-1 User', '%']
+                    ]
+                }
+            );
             c.drawChartEditForm();
         },
 

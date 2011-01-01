@@ -823,19 +823,9 @@ jarmon.RrdChooser.prototype.drawDsSummary = function() {
 };
 
 
-jarmon.ChartEditor = function($tpl) {
+jarmon.ChartEditor = function($tpl, data) {
     this.$tpl = $tpl;
-    this.data = {
-        title: '',
-        datasources: [
-            ['data/cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', '%'],
-            ['data/cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', '%'],
-            ['data/cpu-0/cpu-system.rrd', 0, 'CPU-0 System', '%'],
-            ['data/cpu-1/cpu-system.rrd', 0, 'CPU-1 System', '%'],
-            ['data/cpu-0/cpu-user.rrd', 0, 'CPU-0 User', '%'],
-            ['data/cpu-1/cpu-user.rrd', 0, 'CPU-1 User', '%']
-        ]
-    };
+    this.data = data;
 };
 
 jarmon.ChartEditor.prototype.drawChartEditForm = function() {
@@ -864,29 +854,113 @@ jarmon.ChartEditor.prototype.drawChartEditForm = function() {
                         $('<th/>').text('DS Unit'),
                         $('<th/>')
                     )
-                )
-            ),
-            $('<input/>', {type: 'button', value: 'Add'})
+                ),
+                $('<tfoot/>').append(
+                    $('<tr/>').append(
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {
+                                type: 'button',
+                                value: 'add',
+                                name: 'datasource_add'
+                            })
+                        )
+                    )
+                ),
+                $('<tbody/>')
+            )
         ),
-        $('<input/>', {type: 'submit', value: 'Save'}),
-        $('<div/>', {class: 'next'})
-
+        $('<input/>', {type: 'submit', value: 'save'})
     ).appendTo(this.$tpl);
 
-    $(this.data.datasources).map(
-        function(i, el) {
-            return $('<tr/>').append(
-                $('<td/>').text(el[0]),
-                $('<td/>').text(el[1]),
-                $('<td/>').text(el[2]),
-                $('<td/>').text(el[3]),
-                $('<td/>').append(
-                    $('<input/>', {type: 'button', value: 'edit'}),
-                    $('<input/>', {type: 'button', value: 'delete'})
+    for(var i=0; i<this.data.datasources.length; i++) {
+        this._addDatasourceRow(this.data.datasources[i]);
+    }
+
+    $('form', this.$tpl[0]).live(
+        'submit',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self.data.title = this['title'].value;
+            self.data.datasources = $(this).find('.datasources tbody tr').map(
+                function(i, el) {
+                    return $(el).find('input[type=text]').map(
+                        function(i, el) {
+                            return el.value;
+                        }
+                    );
+                }
+            );
+            console.log(self.data);
+            return false;
+        }
+    );
+
+    $('form input[name=datasource_delete]', this.$tpl[0]).live('click',
+        function(e) {
+            $(this).closest('tr').remove();
+        }
+    );
+
+    $('form input[name=datasource_add]', this.$tpl[0]).live(
+        'click',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self._addDatasourceRow(
+                self._extractRowValues(
+                    $(this).closest('tr')
                 )
             );
+            $(this).closest('tr').find('input[type=text]').val('')
         }
-    ).appendTo(this.$tpl.find('.datasources'));
+    );
+};
+
+
+jarmon.ChartEditor.prototype._extractRowValues = function($row) {
+    return $row.find('input[type=text]').map(
+        function(i, el) {
+            return el.value;
+        }
+    )
+};
+
+
+jarmon.ChartEditor.prototype._addDatasourceRow = function(record) {
+    $('<tr/>').append(
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[0]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[1]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[2]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[3]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {
+                type: 'button',
+                value: 'delete',
+                name: 'datasource_delete'
+            })
+        )
+    ).appendTo(this.$tpl.find('.datasources tbody'));
 };
 
 
