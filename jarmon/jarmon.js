@@ -394,9 +394,10 @@ jarmon.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
  * @param options {Object} Flot options which control how the chart should be
  *      drawn.
  **/
-jarmon.Chart = function(template, options) {
+jarmon.Chart = function(template, recipe) {
     this.template = template;
-    this.options = jQuery.extend(true, {yaxis: {}}, options);
+    this.recipe = recipe;
+    this.options = jQuery.extend(true, {yaxis: {}}, recipe.options);
 
     this.data = [];
 
@@ -410,6 +411,14 @@ jarmon.Chart = function(template, options) {
         self.draw();
     });
 
+    $('.graph-legend input[name=chart_edit]', this.template[0]).live(
+        'click',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            new jarmon.ChartEditor($(this).closest('.graph-legend'), self.recipe).draw();
+        }
+    );
 
     this.options['yaxis']['ticks'] = function(axis) {
         /*
@@ -598,13 +607,15 @@ jarmon.Chart.prototype.draw = function() {
                     // to accomodate the color box
                     var legend = self.template.find('.graph-legend').show();
                     legend.empty();
-                    self.template.find('.legendLabel')
-                        .each(function(i, el) {
+                    self.template.find('.legendLabel').each(
+                        function(i, el) {
                             var orig = $(el);
                             var label = orig.text();
-                            var newEl = $('<div />')
-                                .attr('class', 'legendItem')
-                                .attr('title', 'Data series switch - click to turn this data series on or off')
+                            var newEl = $('<div />', {
+                                'class': 'legendItem',
+                                'title': 'Data series switch - click to turn \
+                                          this data series on or off'
+                            })
                                 .width(orig.width()+20)
                                 .text(label)
                                 .prepend(orig.prev().find('div div').clone().addClass('legendColorBox'))
@@ -615,8 +626,11 @@ jarmon.Chart.prototype.draw = function() {
                             if( $.inArray(label, disabled) > -1 ) {
                                 newEl.addClass('disabled');
                             }
-                        })
-                        .remove();
+                        }
+                    ).remove();
+                    legend.append(
+                        $('<input/>', {type: 'button', value: 'edit', name: 'chart_edit'})
+                    );
                     legend.append($('<div />').css('clear', 'both'));
                     self.template.find('.legend').remove();
 
@@ -673,7 +687,7 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
         if(chartData.length > 0) {
             template = templateFactory();
             template.find('.title').text(recipe['title']);
-            c = new jarmon.Chart(template, recipe['options']);
+            c = new jarmon.Chart(template, recipe);
             for(j=0; j<chartData.length; j++) {
                 c.addData.apply(c, chartData[j]);
             }
@@ -823,17 +837,17 @@ jarmon.RrdChooser.prototype.drawDsSummary = function() {
 };
 
 
-jarmon.ChartEditor = function($tpl, data) {
+jarmon.ChartEditor = function($tpl, recipe) {
     this.$tpl = $tpl;
-    this.data = data;
+    this.recipe = recipe;
 
     $('form', this.$tpl[0]).live(
         'submit',
         {self: this},
         function(e) {
             var self = e.data.self;
-            self.data.title = this['title'].value;
-            self.data.datasources = $(this).find('.datasources tbody tr').map(
+            self.recipe.title = this['title'].value;
+            self.recipe.data = $(this).find('.datasources tbody tr').map(
                 function(i, el) {
                     return $(el).find('input[type=text]').map(
                         function(i, el) {
@@ -889,7 +903,7 @@ jarmon.ChartEditor.prototype.draw = function() {
                 $('<input/>', {
                     type: 'text',
                     name: 'title',
-                    value: this.data.title
+                    value: this.recipe.title
                 })
             )
         ),
@@ -935,8 +949,8 @@ jarmon.ChartEditor.prototype.draw = function() {
         $('<input/>', {type: 'reset', value: 'reset'})
     ).appendTo(this.$tpl);
 
-    for(var i=0; i<this.data.datasources.length; i++) {
-        this._addDatasourceRow(this.data.datasources[i]);
+    for(var i=0; i<this.recipe.data.length; i++) {
+        this._addDatasourceRow(this.recipe.data[i]);
     }
 };
 
