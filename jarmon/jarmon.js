@@ -493,6 +493,11 @@ jarmon.Chart.prototype.setup = function() {
     for(var j=0; j<recipe['data'].length; j++) {
         var rrd = recipe['data'][j][0];
         var ds = recipe['data'][j][1];
+        // Test for integer DS index as opposed to DS name
+        var dsi = parseInt(ds);
+        if(ds.toString() == dsi.toString()) {
+            ds = dsi;
+        }
         var label = recipe['data'][j][2];
         var unit = recipe['data'][j][3];
 
