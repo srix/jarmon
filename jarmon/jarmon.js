@@ -394,12 +394,16 @@ jarmon.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
  * @param options {Object} Flot options which control how the chart should be
  *      drawn.
  **/
-jarmon.Chart = function(template, recipe) {
+jarmon.Chart = function(template, recipe,  downloader) {
     this.template = template;
     this.recipe = recipe;
+    this.downloader = downloader;
+
     this.options = jQuery.extend(true, {yaxis: {}}, recipe.options);
 
     this.data = [];
+
+    this.setup();
 
     var self = this;
 
@@ -416,7 +420,7 @@ jarmon.Chart = function(template, recipe) {
         {self: this},
         function(e) {
             var self = e.data.self;
-            new jarmon.ChartEditor($(this).closest('.graph-legend'), self.recipe).draw();
+            new jarmon.ChartEditor($(this).closest('.graph-legend'), self).draw();
         }
     );
 
@@ -479,6 +483,24 @@ jarmon.Chart = function(template, recipe) {
 
         return ticks;
     };
+};
+
+jarmon.Chart.prototype.setup = function() {
+    this.template.find('.title').text(this.recipe['title']);
+    this.data = [];
+    var recipe = this.recipe;
+    var dataDict = {};
+    for(var j=0; j<recipe['data'].length; j++) {
+        var rrd = recipe['data'][j][0];
+        var ds = recipe['data'][j][1];
+        var label = recipe['data'][j][2];
+        var unit = recipe['data'][j][3];
+
+        if(typeof dataDict[rrd] == 'undefined') {
+            dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, this.downloader);
+        }
+        this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
+    }
 };
 
 jarmon.Chart.prototype.addData = function(label, db, enabled) {
@@ -666,33 +688,11 @@ jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
      **/
 
     var charts = [];
-    var dataDict = {};
 
-    var recipe, chartData, template, c, i, j, ds, label, rrd, unit, re, match;
-
-    for(i=0; i<recipes.length; i++) {
-        recipe = recipes[i];
-        chartData = [];
-
-        for(j=0; j<recipe['data'].length; j++) {
-            rrd = recipe['data'][j][0];
-            ds = recipe['data'][j][1];
-            label = recipe['data'][j][2];
-            unit = recipe['data'][j][3];
-            if(typeof dataDict[rrd] == 'undefined') {
-                dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, downloader);
-            }
-            chartData.push([label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds)]);
-        }
-        if(chartData.length > 0) {
-            template = templateFactory();
-            template.find('.title').text(recipe['title']);
-            c = new jarmon.Chart(template, recipe);
-            for(j=0; j<chartData.length; j++) {
-                c.addData.apply(c, chartData[j]);
-            }
-            charts.push(c);
-        }
+    for(var i=0; i<recipes.length; i++) {
+        charts.push(
+            new jarmon.Chart(templateFactory(), recipes[i], downloader)
+        );
     }
     return charts;
 };
@@ -837,17 +837,17 @@ jarmon.RrdChooser.prototype.drawDsSummary = function() {
 };
 
 
-jarmon.ChartEditor = function($tpl, recipe) {
+jarmon.ChartEditor = function($tpl, chart) {
     this.$tpl = $tpl;
-    this.recipe = recipe;
+    this.chart = chart;
 
     $('form', this.$tpl[0]).live(
         'submit',
         {self: this},
         function(e) {
             var self = e.data.self;
-            self.recipe.title = this['title'].value;
-            self.recipe.data = $(this).find('.datasources tbody tr').map(
+            self.chart.recipe.title = this['title'].value;
+            self.chart.recipe.data = $(this).find('.datasources tbody tr').map(
                 function(i, el) {
                     return $(el).find('input[type=text]').map(
                         function(i, el) {
@@ -856,6 +856,8 @@ jarmon.ChartEditor = function($tpl, recipe) {
                     );
                 }
             );
+            self.chart.setup();
+            self.chart.draw();
             return false;
         }
     );
@@ -903,7 +905,7 @@ jarmon.ChartEditor.prototype.draw = function() {
                 $('<input/>', {
                     type: 'text',
                     name: 'title',
-                    value: this.recipe.title
+                    value: this.chart.recipe.title
                 })
             )
         ),
@@ -949,8 +951,8 @@ jarmon.ChartEditor.prototype.draw = function() {
         $('<input/>', {type: 'reset', value: 'reset'})
     ).appendTo(this.$tpl);
 
-    for(var i=0; i<this.recipe.data.length; i++) {
-        this._addDatasourceRow(this.recipe.data[i]);
+    for(var i=0; i<this.chart.recipe.data.length; i++) {
+        this._addDatasourceRow(this.chart.recipe.data[i]);
     }
 };
 
