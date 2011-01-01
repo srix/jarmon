@@ -826,9 +826,59 @@ jarmon.RrdChooser.prototype.drawDsSummary = function() {
 jarmon.ChartEditor = function($tpl, data) {
     this.$tpl = $tpl;
     this.data = data;
+
+    $('form', this.$tpl[0]).live(
+        'submit',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self.data.title = this['title'].value;
+            self.data.datasources = $(this).find('.datasources tbody tr').map(
+                function(i, el) {
+                    return $(el).find('input[type=text]').map(
+                        function(i, el) {
+                            return el.value;
+                        }
+                    );
+                }
+            );
+            return false;
+        }
+    );
+
+    $('form', this.$tpl[0]).live(
+        'reset',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self.draw();
+            return false;
+        }
+    );
+
+    $('form input[name=datasource_delete]', this.$tpl[0]).live(
+        'click',
+        function(e) {
+            $(this).closest('tr').remove();
+        }
+    );
+
+    $('form input[name=datasource_add]', this.$tpl[0]).live(
+        'click',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self._addDatasourceRow(
+                self._extractRowValues(
+                    $(this).closest('tr')
+                )
+            );
+            $(this).closest('tr').find('input[type=text]').val('');
+        }
+    );
 };
 
-jarmon.ChartEditor.prototype.drawChartEditForm = function() {
+jarmon.ChartEditor.prototype.draw = function() {
     var self = this;
     this.$tpl.empty();
 
@@ -881,52 +931,13 @@ jarmon.ChartEditor.prototype.drawChartEditForm = function() {
                 $('<tbody/>')
             )
         ),
-        $('<input/>', {type: 'submit', value: 'save'})
+        $('<input/>', {type: 'submit', value: 'save'}),
+        $('<input/>', {type: 'reset', value: 'reset'})
     ).appendTo(this.$tpl);
 
     for(var i=0; i<this.data.datasources.length; i++) {
         this._addDatasourceRow(this.data.datasources[i]);
     }
-
-    $('form', this.$tpl[0]).live(
-        'submit',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            self.data.title = this['title'].value;
-            self.data.datasources = $(this).find('.datasources tbody tr').map(
-                function(i, el) {
-                    return $(el).find('input[type=text]').map(
-                        function(i, el) {
-                            return el.value;
-                        }
-                    );
-                }
-            );
-            console.log(self.data);
-            return false;
-        }
-    );
-
-    $('form input[name=datasource_delete]', this.$tpl[0]).live('click',
-        function(e) {
-            $(this).closest('tr').remove();
-        }
-    );
-
-    $('form input[name=datasource_add]', this.$tpl[0]).live(
-        'click',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            self._addDatasourceRow(
-                self._extractRowValues(
-                    $(this).closest('tr')
-                )
-            );
-            $(this).closest('tr').find('input[type=text]').val('')
-        }
-    );
 };
 
 

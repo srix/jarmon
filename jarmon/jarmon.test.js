@@ -466,7 +466,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     ]
                 }
             );
-            c.drawChartEditForm();
+            c.draw();
         },
 
         test_drawInitialForm: function () {
