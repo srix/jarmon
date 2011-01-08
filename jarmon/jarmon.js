@@ -679,30 +679,6 @@ jarmon.Chart.prototype.draw = function() {
 };
 
 
-jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
-    /**
-     * A static factory method to generate a list of I{Chart} from a list of
-     * recipes and a list of available rrd files in collectd path format.
-     *
-     * @method fromRecipe
-     * @param recipes {Array} A list of recipe objects.
-     * @param templateFactory {Function} A callable which generates an html
-     *      template for a chart.
-     * @param downloader {Function} A download function which returns a Deferred
-     * @return {Array} A list of Chart objects
-     **/
-
-    var charts = [];
-
-    for(var i=0; i<recipes.length; i++) {
-        charts.push(
-            new jarmon.Chart(templateFactory(), recipes[i], downloader)
-        );
-    }
-    return charts;
-};
-
-
 /**
  * Generate a form through which to choose a data source from a remote RRD file
  *

@@ -18,31 +18,36 @@
         <script type="text/javascript">
         // Recipes for the charts on this page
 
-        var application_recipes = [
-            {
-                title: 'Jarmon Webserver TCP Stats',
-                data: [
-                    ['data/tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-TIME_WAIT.rrd', 0, 'TIME_WAIT', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-CLOSED.rrd', 0, 'CLOSED', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT2.rrd', 0, 'FIN_WAIT2', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT1.rrd', 0, 'FIN_WAIT1', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-ESTABLISHED.rrd', 0, 'ESTABLISHED', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-LAST_ACK.rrd', 0, 'LAST_ACK', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-LISTEN.rrd', 0, 'LISTEN', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
-                    ['data/tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
-                ],
-                options: jQuery.extend(true, {yaxis: {tickDecimals: 0}}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
-            }
-        ];
+        var application_recipe = {
+            title: 'Jarmon Webserver TCP Stats',
+            data: [
+                ['data/tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
+                ['data/tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
+                ['data/tcpconns-8080-local/tcp_connections-TIME_WAIT.rrd', 0, 'TIME_WAIT', ''],
+                ['data/tcpconns-8080-local/tcp_connections-CLOSED.rrd', 0, 'CLOSED', ''],
+                ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT2.rrd', 0, 'FIN_WAIT2', ''],
+                ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT1.rrd', 0, 'FIN_WAIT1', ''],
+                ['data/tcpconns-8080-local/tcp_connections-ESTABLISHED.rrd', 0, 'ESTABLISHED', ''],
+                ['data/tcpconns-8080-local/tcp_connections-LAST_ACK.rrd', 0, 'LAST_ACK', ''],
+                ['data/tcpconns-8080-local/tcp_connections-LISTEN.rrd', 0, 'LISTEN', ''],
+                ['data/tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
+                ['data/tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
+            ],
+            options: jQuery.extend(true, {yaxis: {tickDecimals: 0}}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
+        };
 
 
         function initialiseCharts() {
             /**
              * Setup chart date range controls and all charts
              **/
+            var cc = new jarmon.ChartCoordinator($('.chartRangeControl'));
+
+            var TABS = [
+                ['System',      ['cpu', 'memory','load']],
+                ['Network',     ['interface']],
+                ['DNS',         ['dns_query_types', 'dns_return_codes']]
+            ];
 
             var p = new jarmon.Parallimiter(1);
             function serialDownloader(url) {
@@ -50,17 +55,36 @@
             }
 
             // Extract the chart template from the page
-            var chartTemplate = $('.chart-container').remove();
+            var $chartTemplate = $('.chart-container').remove();
 
-            function templateFactory(parentEl) {
-                return function() {
-                    // The chart template must be appended to the page early, so
-                    // that flot can calculate chart dimensions etc.
-                    return chartTemplate.clone().appendTo(parentEl);
+            var $tabs = $('<ul/>', {'class': 'css-tabs'}).appendTo('.tabbed-chart-interface');
+            var $tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo('.tabbed-chart-interface');
+            var tabName, $tabPanel, chartNames;
+            for(var i=0; i<TABS.length; i++) {
+                tabName = TABS[i][0];
+                chartNames = TABS[i][1];
+                // Add a tab
+                $('<li/>').append(
+                    $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
+                ).appendTo($tabs);
+
+                // Add tab panel
+                $tabPanel = $('<div/>').appendTo($tabPanels);
+
+                for(var j=0; j<chartNames.length; j++) {
+                    cc.charts.push(
+                        new jarmon.Chart(
+                            $chartTemplate.clone().appendTo($tabPanel),
+                            jarmon.COLLECTD_RECIPES[chartNames[j]],
+                            serialDownloader
+                        )
+                    );
                 }
             }
 
-            var cc = new jarmon.ChartCoordinator($('.chartRangeControl'));
+            // Setup dhtml tabs
+            $(".css-tabs").tabs(".css-panes > div", {history: true});
+
             var t;
             // Initialise tabs and update charts when tab is clicked
             $(".css-tabs:first").bind('click', function(i) {
@@ -69,24 +93,6 @@
                 window.clearTimeout(t);
                 t = window.setTimeout(function() { cc.update(); }, 100);
             });
-
-            cc.charts = [].concat(
-                jarmon.Chart.fromRecipe(
-                    [].concat(
-                        jarmon.COLLECTD_RECIPES.cpu,
-                        jarmon.COLLECTD_RECIPES.memory,
-                        jarmon.COLLECTD_RECIPES.load),
-                    templateFactory('.system-charts'), serialDownloader),
-                jarmon.Chart.fromRecipe(
-                    jarmon.COLLECTD_RECIPES.interface,
-                    templateFactory('.network-charts'), serialDownloader),
-                jarmon.Chart.fromRecipe(
-                    jarmon.COLLECTD_RECIPES.dns,
-                    templateFactory('.dns-charts'), serialDownloader),
-                jarmon.Chart.fromRecipe(
-                    application_recipes,
-                    templateFactory('.application-charts'), serialDownloader)
-            );
 
             // Initialise all the charts
             cc.init();
@@ -157,9 +163,6 @@
                 }
             );
 
-            // Setup dhtml tabs
-            $(".css-tabs").tabs(".css-panes > div", {history: true});
-
             initialiseCharts();
         });
         </script>
@@ -194,18 +197,7 @@
                 <div class="range-preview"
                      title="Time range preview - click and drag to select a custom timerange" ></div>
             </form>
-            <ul class="css-tabs">
-                <li><a href="#system">System</a></li>
-                <li><a href="#network">Network</a></li>
-                <li><a href="#dns">DNS</a></li>
-                <li><a href="#application">Application</a></li>
-            </ul>
-            <div class="css-panes charts">
-                <div class="system-charts"></div>
-                <div class="network-charts"></div>
-                <div class="dns-charts"></div>
-                <div class="application-charts"></div>
-            </div>
+            <div class="tabbed-chart-interface"></div>
             <div class="chart-container">
                 <h2 class="title"></h2>
                 <div class="error"></div>
