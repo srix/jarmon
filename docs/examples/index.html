@@ -16,154 +16,15 @@
         <script type="text/javascript" src="../../jarmon/jarmon.js"></script>
         <script type="text/javascript" src="jarmon_example_recipes.js"></script>
         <script type="text/javascript">
-        // Recipes for the charts on this page
-
-        var application_recipe = {
-            title: 'Jarmon Webserver TCP Stats',
-            data: [
-                ['data/tcpconns-8080-local/tcp_connections-CLOSE_WAIT.rrd', 0, 'CLOSE_WAIT', ''],
-                ['data/tcpconns-8080-local/tcp_connections-SYN_RECV.rrd', 0, 'SYN_RECV', ''],
-                ['data/tcpconns-8080-local/tcp_connections-TIME_WAIT.rrd', 0, 'TIME_WAIT', ''],
-                ['data/tcpconns-8080-local/tcp_connections-CLOSED.rrd', 0, 'CLOSED', ''],
-                ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT2.rrd', 0, 'FIN_WAIT2', ''],
-                ['data/tcpconns-8080-local/tcp_connections-FIN_WAIT1.rrd', 0, 'FIN_WAIT1', ''],
-                ['data/tcpconns-8080-local/tcp_connections-ESTABLISHED.rrd', 0, 'ESTABLISHED', ''],
-                ['data/tcpconns-8080-local/tcp_connections-LAST_ACK.rrd', 0, 'LAST_ACK', ''],
-                ['data/tcpconns-8080-local/tcp_connections-LISTEN.rrd', 0, 'LISTEN', ''],
-                ['data/tcpconns-8080-local/tcp_connections-SYN_SENT.rrd', 0, 'SYN_SENT', ''],
-                ['data/tcpconns-8080-local/tcp_connections-CLOSING.rrd', 0, 'CLOSING', '']
-            ],
-            options: jQuery.extend(true, {yaxis: {tickDecimals: 0}}, jarmon.Chart.BASE_OPTIONS, jarmon.Chart.STACKED_OPTIONS)
-        };
-
-
-        function initialiseCharts() {
-            /**
-             * Setup chart date range controls and all charts
-             **/
-            var cc = new jarmon.ChartCoordinator($('.chartRangeControl'));
-
-            var TABS = [
-                ['System',      ['cpu', 'memory','load']],
-                ['Network',     ['interface']],
-                ['DNS',         ['dns_query_types', 'dns_return_codes']]
-            ];
-
-            var p = new jarmon.Parallimiter(1);
-            function serialDownloader(url) {
-                return p.addCallable(jarmon.downloadBinary, [url]);
-            }
-
-            // Extract the chart template from the page
-            var $chartTemplate = $('.chart-container').remove();
-
-            var $tabs = $('<ul/>', {'class': 'css-tabs'}).appendTo('.tabbed-chart-interface');
-            var $tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo('.tabbed-chart-interface');
-            var tabName, $tabPanel, chartNames;
-            for(var i=0; i<TABS.length; i++) {
-                tabName = TABS[i][0];
-                chartNames = TABS[i][1];
-                // Add a tab
-                $('<li/>').append(
-                    $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
-                ).appendTo($tabs);
-
-                // Add tab panel
-                $tabPanel = $('<div/>').appendTo($tabPanels);
-
-                for(var j=0; j<chartNames.length; j++) {
-                    cc.charts.push(
-                        new jarmon.Chart(
-                            $chartTemplate.clone().appendTo($tabPanel),
-                            jarmon.COLLECTD_RECIPES[chartNames[j]],
-                            serialDownloader
-                        )
-                    );
-                }
-            }
-
-            // Setup dhtml tabs
-            $(".css-tabs").tabs(".css-panes > div", {history: true});
-
-            var t;
-            // Initialise tabs and update charts when tab is clicked
-            $(".css-tabs:first").bind('click', function(i) {
-                // XXX: Hack to give the tab just enough time to become visible
-                // so that flot can calculate chart dimensions.
-                window.clearTimeout(t);
-                t = window.setTimeout(function() { cc.update(); }, 100);
-            });
-
-            // Initialise all the charts
-            cc.init();
-        }
 
         $(function() {
-            // Add dhtml calendars to the date input fields
-            $(".timerange_control img")
-                .dateinput({
-                    'format': 'dd mmm yyyy 00:00:00',
-                    'max': +1,
-                    'css': {'input': 'jquerytools_date'}})
-                .bind('onBeforeShow', function(e) {
-                    var classes = $(this).attr('class').split(' ');
-                    var currentDate, input_selector;
-                    for(var i=0; i<=classes.length; i++) {
-                        input_selector = '[name="' + classes[i] + '"]';
-                        // Look for a neighboring input element whose name matches the
-                        // class name of this calendar
-                        // Parse the value as a date if the returned date.getTime
-                        // returns NaN we know it's an invalid date
-                        // XXX: is there a better way to check for valid date?
-                        currentDate = new Date($(this).siblings(input_selector).val());
-                        if(currentDate.getTime() != NaN) {
-                            $(this).data('dateinput')._input_selector = input_selector;
-                            $(this).data('dateinput')._initial_val = currentDate.getTime();
-                            $(this).data('dateinput').setValue(currentDate);
-                            break;
-                        }
-                    }
-                })
-                .bind('onHide', function(e) {
-                    // Called after a calendar date has been chosen by the user.
-
-                    // Use the sibling selector that we generated above before opening
-                    // the calendar
-                    var input_selector = $(this).data('dateinput')._input_selector;
-                    var oldStamp = $(this).data('dateinput')._initial_val;
-                    var newDate = $(this).data('dateinput').getValue();
-                    // Only update the form field if the date has changed.
-                    if(oldStamp != newDate.getTime()) {
-                        $(this).siblings(input_selector).val(
-                            newDate.toString().split(' ').slice(1,5).join(' '));
-                        // Trigger a change event which should automatically update the
-                        // graphs and change the timerange drop down selector to
-                        // "custom"
-                        $(this).siblings(input_selector).trigger('change');
-                    }
-                });
-
-            // Avoid overlaps between the calendars
-            // XXX: This is a bit of hack, what if there's more than one set of calendar
-            // controls on a page?
-            $(".timerange_control img.from_custom").bind('onBeforeShow',
-                function() {
-                    var otherVal = new Date(
-                        $('.timerange_control [name="to_custom"]').val());
-
-                    $(this).data('dateinput').setMax(otherVal);
-                }
+            jarmon.buildTabbedChartUi(
+                $('.chart-container').remove(),
+                jarmon.CHART_RECIPES_COLLECTD,
+                $('.tabbed-chart-interface'),
+                jarmon.TAB_RECIPES_STANDARD,
+                $('.chartRangeControl')
             );
-            $(".timerange_control img.to_custom").bind('onBeforeShow',
-                function() {
-                    var otherVal = new Date(
-                        $('.timerange_control [name="from_custom"]').val());
-
-                    $(this).data('dateinput').setMin(otherVal);
-                }
-            );
-
-            initialiseCharts();
         });
         </script>
     </head>
@@ -205,5 +66,6 @@
                 <div class="graph-legend"></div>
             </div>
         </div>
+
     </body>
 </html>

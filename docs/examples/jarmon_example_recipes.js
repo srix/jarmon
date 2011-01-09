@@ -9,7 +9,13 @@ if(typeof jarmon == 'undefined') {
     var jarmon = {};
 }
 
-jarmon.COLLECTD_RECIPES = {
+jarmon.TAB_RECIPES_STANDARD = [
+    ['System',      ['cpu', 'memory','load']],
+    ['Network',     ['interface']],
+    ['DNS',         ['dns_query_types', 'dns_return_codes']]
+];
+
+jarmon.CHART_RECIPES_COLLECTD = {
     'cpu': {
         title: 'CPU Usage',
         data: [

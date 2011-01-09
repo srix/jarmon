@@ -972,6 +972,89 @@ jarmon.ChartEditor.prototype._addDatasourceRow = function(record) {
 };
 
 
+jarmon.TabbedInterface = function($tpl, recipe) {
+    this.$tpl = $tpl;
+    this.recipe = recipe;
+    this.placeholders = [];
+
+    var $tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
+    var $tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
+    var tabName, $tabPanel, placeNames;
+    for(var i=0; i<recipe.length; i++) {
+        tabName = recipe[i][0];
+        placeNames = recipe[i][1];
+        // Add a tab
+        $('<li/>').append(
+            $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
+        ).appendTo($tabBar);
+
+        // Add tab panel
+        $tabPanel = $('<div/>').appendTo($tabPanels);
+
+        for(var j=0; j<placeNames.length; j++) {
+            this.placeholders.push([
+                placeNames[j], $('<div/>').appendTo($tabPanel)]);
+        }
+    }
+
+    // Setup dhtml tabs
+    $tabBar.tabs($tabPanels.children('div'), {history: true});
+
+};
+
+jarmon.TabbedInterface.prototype.draw = function() {
+
+};
+
+
+jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
+                                      $tabTemplate, tabRecipes,
+                                      $controlPanelTemplate) {
+    /**
+     * Setup chart date range controls and all charts
+     **/
+    var p = new jarmon.Parallimiter(1);
+    function serialDownloader(url) {
+        return p.addCallable(jarmon.downloadBinary, [url]);
+    }
+
+    var ti = new jarmon.TabbedInterface($tabTemplate, tabRecipes);
+
+    var charts = jQuery.map(
+        ti.placeholders,
+        function(el, i) {
+            return new jarmon.Chart(
+                $chartTemplate.clone().replaceAll(el[1]),
+                chartRecipes[el[0]],
+                serialDownloader
+            )
+        }
+    );
+
+    var cc = new jarmon.ChartCoordinator($controlPanelTemplate, charts);
+    // Update charts when tab is clicked
+    ti.$tpl.find(".css-tabs:first").bind(
+        'click',
+        {'cc': cc},
+        function(e) {
+            var cc = e.data.cc;
+            // XXX: Hack to give the tab just enough time to become visible
+            // so that flot can calculate chart dimensions.
+            window.clearTimeout(cc.t);
+            cc.t = window.setTimeout(
+                function() {
+                    cc.update();
+                }, 100);
+        }
+    );
+
+    // Initialise all the charts
+    cc.init();
+
+    return [charts, ti, cc];
+};
+
+
 // Options common to all the chart on this page
 jarmon.Chart.BASE_OPTIONS = {
     grid: {
@@ -1038,10 +1121,10 @@ jarmon.timeRangeShortcuts = [
  * @param ui {Object} A one element jQuery containing an input form and
  *      placeholders for the timeline and for the series of charts.
  **/
-jarmon.ChartCoordinator = function(ui) {
+jarmon.ChartCoordinator = function(ui, charts) {
     var self = this;
     this.ui = ui;
-    this.charts = [];
+    this.charts = charts;
 
     // Style and configuration of the range timeline
     this.rangePreviewOptions = {
@@ -1140,6 +1223,77 @@ jarmon.ChartCoordinator = function(ui) {
         self.setTimeRange(ranges.xaxis.from, ranges.xaxis.to);
         self.update();
     });
+
+    // Add dhtml calendars to the date input fields
+    this.ui.find(".timerange_control img")
+        .dateinput({
+            'format': 'dd mmm yyyy 00:00:00',
+            'max': +1,
+            'css': {'input': 'jquerytools_date'}})
+        .bind('onBeforeShow', function(e) {
+            var classes = $(this).attr('class').split(' ');
+            var currentDate, input_selector;
+            for(var i=0; i<=classes.length; i++) {
+                input_selector = '[name="' + classes[i] + '"]';
+                // Look for a neighboring input element whose name matches the
+                // class name of this calendar
+                // Parse the value as a date if the returned date.getTime
+                // returns NaN we know it's an invalid date
+                // XXX: is there a better way to check for valid date?
+                currentDate = new Date($(this).siblings(input_selector).val());
+                if(currentDate.getTime() != NaN) {
+                    $(this).data('dateinput')._input_selector = input_selector;
+                    $(this).data('dateinput')._initial_val = currentDate.getTime();
+                    $(this).data('dateinput').setValue(currentDate);
+                    break;
+                }
+            }
+        })
+        .bind('onHide', function(e) {
+            // Called after a calendar date has been chosen by the user.
+
+            // Use the sibling selector that we generated above before opening
+            // the calendar
+            var input_selector = $(this).data('dateinput')._input_selector;
+            var oldStamp = $(this).data('dateinput')._initial_val;
+            var newDate = $(this).data('dateinput').getValue();
+            // Only update the form field if the date has changed.
+            if(oldStamp != newDate.getTime()) {
+                $(this).siblings(input_selector).val(
+                    newDate.toString().split(' ').slice(1,5).join(' '));
+                // Trigger a change event which should automatically update the
+                // graphs and change the timerange drop down selector to
+                // "custom"
+                $(this).siblings(input_selector).trigger('change');
+            }
+        });
+
+    // Avoid overlaps between the calendars
+    // XXX: This is a bit of hack, what if there's more than one set of calendar
+    // controls on a page?
+    this.ui.find(".timerange_control img.from_custom").bind(
+        'onBeforeShow',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            var otherVal = new Date(
+                self.ui.find('.timerange_control [name="to_custom"]').val());
+
+            $(this).data('dateinput').setMax(otherVal);
+        }
+    );
+    this.ui.find(".timerange_control img.to_custom").bind(
+        'onBeforeShow',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            var otherVal = new Date(
+                self.ui.find('.timerange_control [name="from_custom"]').val());
+
+            $(this).data('dateinput').setMin(otherVal);
+        }
+    );
+
 };
 
 
