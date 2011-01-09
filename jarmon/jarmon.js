@@ -977,19 +977,14 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     this.recipe = recipe;
     this.placeholders = [];
 
-    var $tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
-    var $tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
+    this.$tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
+    this.$tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
     var tabName, $tabPanel, placeNames;
     for(var i=0; i<recipe.length; i++) {
         tabName = recipe[i][0];
         placeNames = recipe[i][1];
-        // Add a tab
-        $('<li/>').append(
-            $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
-        ).appendTo($tabBar);
 
-        // Add tab panel
-        $tabPanel = $('<div/>').appendTo($tabPanels);
+        $tabPanel = this.newTab(tabName);
 
         for(var j=0; j<placeNames.length; j++) {
             this.placeholders.push([
@@ -997,15 +992,52 @@ jarmon.TabbedInterface = function($tpl, recipe) {
         }
     }
 
+    this.setup();
+
+    this.newTab('+').append(
+        $('<form/>').append(
+            $('<div/>').append(
+                $('<label/>').append(
+                    'Tab Title',
+                    $('<input/>', {type: 'text', name: 'tabTitle', value: ''})
+                )
+            ),
+            $('<div/>').append(
+                $('<input/>', {type: 'submit', value: 'save'})
+            )
+        ).bind(
+            'submit',
+            {self: this},
+            function(e) {
+                var self = e.data.self;
+                self.newTab(this.tabTitle.value);
+                self.setup();
+                return false;
+            }
+        )
+    );
+
+    this.setup();
+};
+
+jarmon.TabbedInterface.prototype.newTab = function(tabName) {
+    // Add a tab
+    $('<li/>').append(
+        $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
+    ).appendTo(this.$tabBar);
+
+    // Add tab panel
+    return $('<div/>').appendTo(this.$tabPanels);
+};
+
+jarmon.TabbedInterface.prototype.setup = function() {
     // Setup dhtml tabs
-    $tabBar.tabs($tabPanels.children('div'), {history: true});
-
+    var api = this.$tabBar.data("tabs");
+    if(api) {
+        api.destroy();
+    }
+    this.$tabBar.tabs(this.$tabPanels.children('div'));
 };
-
-jarmon.TabbedInterface.prototype.draw = function() {
-
-};
-
 
 jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
                                       $tabTemplate, tabRecipes,
