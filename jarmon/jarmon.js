@@ -992,8 +992,6 @@ jarmon.TabbedInterface = function($tpl, recipe) {
         }
     }
 
-    this.setup();
-
     this.newTab('+').append(
         $('<form/>').append(
             $('<div/>').append(
@@ -1018,6 +1016,33 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     );
 
     this.setup();
+
+    $('ul.css-tabs > li > a', $tpl[0]).live(
+        'dblclick',
+        function(e) {
+            var $originalLink = $(this);
+            var $input = $('<input/>', {
+                type: 'text',
+                name: 'tabTitle',
+                value: $originalLink.text()
+            });
+            $originalLink.replaceWith($input);
+            $input.focus();
+        }
+    );
+
+    $('ul.css-tabs > li > input', $tpl[0]).live(
+        'blur',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            $(this).replaceWith(
+                $('<a/>', {href: ['#', this.value].join('')}).text(this.value)
+            );
+            self.setup();
+            self.$tabBar.data("tabs").click(this.value);
+        }
+    );
 };
 
 jarmon.TabbedInterface.prototype.newTab = function(tabName) {
