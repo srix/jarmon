@@ -978,6 +978,14 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     this.placeholders = [];
 
     this.$tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
+    this.$newTabControls = $('<li/>', {
+        'class': 'newTabControls',
+        'title': 'Add new tab'
+    }).append(
+        $('<img/>', {src: 'assets/icons/next.gif'}),
+        $('<input/>').hide()
+    ).appendTo(this.$tabBar);
+
     this.$tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
     var tabName, $tabPanel, placeNames;
     for(var i=0; i<recipe.length; i++) {
@@ -992,55 +1000,26 @@ jarmon.TabbedInterface = function($tpl, recipe) {
         }
     }
 
-    this.newTab('+').append(
-        $('<form/>').append(
-            $('<div/>').append(
-                $('<label/>').append(
-                    'Tab Title',
-                    $('<input/>', {type: 'text', name: 'tabTitle', value: ''})
-                )
-            ),
-            $('<div/>').append(
-                $('<input/>', {type: 'submit', value: 'save'})
-            )
-        ).bind(
-            'submit',
-            {self: this},
-            function(e) {
-                var self = e.data.self;
-                self.newTab(this.tabTitle.value);
-                self.setup();
-                return false;
-            }
-        )
-    );
-
     this.setup();
 
-    $('ul.css-tabs > li > a', $tpl[0]).live(
-        'dblclick',
+    $('ul.css-tabs > li.newTabControls > img', $tpl[0]).live(
+        'click',
         function(e) {
-            var $originalLink = $(this);
-            var $input = $('<input/>', {
-                type: 'text',
-                name: 'tabTitle',
-                value: $originalLink.text()
-            });
-            $originalLink.replaceWith($input);
-            $input.focus();
+            $(this).hide().siblings().val('').show().focus();
         }
     );
 
-    $('ul.css-tabs > li > input', $tpl[0]).live(
+    $('ul.css-tabs > li.newTabControls > input', $tpl[0]).live(
         'blur',
         {self: this},
         function(e) {
             var self = e.data.self;
-            $(this).replaceWith(
-                $('<a/>', {href: ['#', this.value].join('')}).text(this.value)
-            );
-            self.setup();
-            self.$tabBar.data("tabs").click(this.value);
+            $(this).hide().siblings().show();
+            if(this.value) {
+                self.newTab(this.value);
+                self.setup();
+                self.$tabBar.data("tabs").click(this.value);
+            }
         }
     );
 };
@@ -1056,12 +1035,14 @@ jarmon.TabbedInterface.prototype.newTab = function(tabName) {
 };
 
 jarmon.TabbedInterface.prototype.setup = function() {
+    this.$newTabControls.remove();
     // Setup dhtml tabs
     var api = this.$tabBar.data("tabs");
     if(api) {
         api.destroy();
     }
     this.$tabBar.tabs(this.$tabPanels.children('div'));
+    this.$newTabControls.appendTo(this.$tabBar);
 };
 
 jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
