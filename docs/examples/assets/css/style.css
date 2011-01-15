@@ -75,6 +75,11 @@ input[type=checkbox] {
     border: none;
 }
 
+input[type=text] {
+    padding: 3px;
+    border: 1px solid #EEE;
+}
+
 .notice {
     border: 1px solid Green;
     background: #FFDDFF;

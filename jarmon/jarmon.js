@@ -983,7 +983,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
         'title': 'Add new tab'
     }).append(
         $('<img/>', {src: 'assets/icons/next.gif'}),
-        $('<input/>').hide()
+        $('<input/>', {'type': 'text'}).hide()
     ).appendTo(this.$tabBar);
 
     this.$tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
@@ -1030,7 +1030,8 @@ jarmon.TabbedInterface = function($tpl, recipe) {
             var $originalLink = $(this);
             var $input = $('<input/>', {
                 'value': $originalLink.text(),
-                'name': 'editTabTitle'
+                'name': 'editTabTitle',
+                'type': 'text'
             })
             $originalLink.replaceWith($input);
             $input.focus();
@@ -1285,11 +1286,36 @@ jarmon.ChartCoordinator = function(ui, charts) {
 
     // When a selection is made on the range timeline, or any of my charts
     // redraw all the charts.
-    this.ui.bind("plotselected", function(event, ranges) {
-        self.ui.find('[name="from_standard"]').val('custom');
-        self.setTimeRange(ranges.xaxis.from, ranges.xaxis.to);
-        self.update();
-    });
+    $(document).bind(
+        'plotselected',
+        {self: this},
+        function(e, ranges) {
+            var self = e.data.self;
+            var eventSourceIsMine = false;
+
+            // plotselected event may be from my range selector chart or
+            if( self.ui.has(e.target) ) {
+                eventSourceIsMine = true;
+            } else {
+                // ...it may come from one of the charts under my supervision
+                for(var i=0; i<self.charts.length; i++) {
+                    if(self.charts[i].template.has(e.target).length > 0) {
+                        eventSourceIsMine = true;
+                        break;
+                    }
+                }
+            }
+
+            if(eventSourceIsMine) {
+                // Update the prepared time range select box to value "custom"
+                self.ui.find('[name="from_standard"]').val('custom');
+
+                // Update all my charts
+                self.setTimeRange(ranges.xaxis.from, ranges.xaxis.to);
+                self.update();
+            }
+        }
+    );
 
     // Add dhtml calendars to the date input fields
     this.ui.find(".timerange_control img")
