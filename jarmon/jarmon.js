@@ -1084,7 +1084,7 @@ jarmon.TabbedInterface.prototype.newTab = function(tabName) {
     // Add tab panel
     $('<div/>').append(
         $placeholder,
-        $('<div/>').append(
+        $('<div/>', {'class': 'tab-controls'}).append(
             $('<input/>', {
                 type: 'button',
                 value: 'Add new chart',
@@ -1124,15 +1124,6 @@ jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
     var charts = jQuery.map(
         ti.placeholders,
         function(el, i) {
-            /*
-            $('.graph-legend input[name=chart_edit]', this.template[0]).live(
-                'click',
-                {self: this},
-                function(e) {
-
-                }
-            );
-            */
             var chart = new jarmon.Chart(
                 $chartTemplate.clone().appendTo(el[1]),
                 chartRecipes[el[0]],
@@ -1144,7 +1135,17 @@ jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
                 {chart: chart},
                 function(e) {
                     var chart = e.data.chart;
-                    new jarmon.ChartEditor($(this).closest('.chart-container').find('.graph-legend'), chart).draw();
+                    new jarmon.ChartEditor(
+                        chart.template.find('.graph-legend'), chart).draw();
+                }
+            );
+
+            $('input[name=chart_delete]', el[1][0]).live(
+                'click',
+                {chart: chart},
+                function(e) {
+                    var chart = e.data.chart;
+                    chart.template.remove();
                 }
             );
 
