@@ -415,15 +415,6 @@ jarmon.Chart = function(template, recipe,  downloader) {
         self.draw();
     });
 
-    $('.graph-legend input[name=chart_edit]', this.template[0]).live(
-        'click',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            new jarmon.ChartEditor($(this).closest('.graph-legend'), self).draw();
-        }
-    );
-
     this.options['yaxis']['ticks'] = function(axis) {
         /*
          * Choose a suitable SI multiplier based on the min and max values from
@@ -655,9 +646,6 @@ jarmon.Chart.prototype.draw = function() {
                             }
                         }
                     ).remove();
-                    legend.append(
-                        $('<input/>', {type: 'button', value: 'edit', name: 'chart_edit'})
-                    );
                     legend.append($('<div />').css('clear', 'both'));
                     self.template.find('.legend').remove();
 
@@ -1077,6 +1065,14 @@ jarmon.TabbedInterface = function($tpl, recipe) {
             self.$tabBar.data("tabs").click(this.value);
         }
     );
+
+    $('input[name=add_new_chart]', $tpl[0]).live(
+        'click',
+        {self: this},
+        function(e) {
+            console.log(e);
+        }
+    );
 };
 
 jarmon.TabbedInterface.prototype.newTab = function(tabName) {
@@ -1084,9 +1080,20 @@ jarmon.TabbedInterface.prototype.newTab = function(tabName) {
     $('<li/>').append(
         $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
     ).appendTo(this.$tabBar);
-
+    var $placeholder = $('<div/>');
     // Add tab panel
-    return $('<div/>').appendTo(this.$tabPanels);
+    $('<div/>').append(
+        $placeholder,
+        $('<div/>').append(
+            $('<input/>', {
+                type: 'button',
+                value: 'Add new chart',
+                name: 'add_new_chart'
+            })
+        )
+    ).appendTo(this.$tabPanels);
+
+    return $placeholder;
 };
 
 jarmon.TabbedInterface.prototype.setup = function() {
@@ -1117,11 +1124,31 @@ jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
     var charts = jQuery.map(
         ti.placeholders,
         function(el, i) {
-            return new jarmon.Chart(
-                $chartTemplate.clone().replaceAll(el[1]),
+            /*
+            $('.graph-legend input[name=chart_edit]', this.template[0]).live(
+                'click',
+                {self: this},
+                function(e) {
+
+                }
+            );
+            */
+            var chart = new jarmon.Chart(
+                $chartTemplate.clone().appendTo(el[1]),
                 chartRecipes[el[0]],
                 serialDownloader
-            )
+            );
+
+            $('input[name=chart_edit]', el[1][0]).live(
+                'click',
+                {chart: chart},
+                function(e) {
+                    var chart = e.data.chart;
+                    new jarmon.ChartEditor($(this).closest('.chart-container').find('.graph-legend'), chart).draw();
+                }
+            );
+
+            return chart;
         }
     );
 
