@@ -8,9 +8,7 @@ import logging
 import os
 import shutil
 import sys
-import time
 
-from datetime import datetime
 from optparse import OptionParser
 from subprocess import check_call, PIPE
 from tempfile import gettempdir
@@ -20,8 +18,8 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import pkg_resources
 
 
-JARMON_PROJECT_TITLE='Jarmon'
-JARMON_PROJECT_URL='http://www.launchpad.net/jarmon'
+JARMON_PROJECT_TITLE = 'Jarmon'
+JARMON_PROJECT_URL = 'http://www.launchpad.net/jarmon'
 
 YUIDOC_URL = 'http://yuilibrary.com/downloads/yuidoc/yuidoc_1.0.0b1.zip'
 YUIDOC_MD5 = 'cd5545d2dec8f7afe3d18e793538162c'
@@ -91,15 +89,17 @@ class BuildApidocsCommand(BuildCommand):
         yuizip_path = os.path.join(tmpdir, os.path.basename(YUIDOC_URL))
         if os.path.exists(yuizip_path):
             self.log.debug('Using cached YUI doc')
+
             def producer():
                 yield open(yuizip_path).read()
         else:
             self.log.debug('Downloading YUI Doc')
+
             def producer():
                 with open(yuizip_path, 'w') as yuizip:
                     download = urlopen(YUIDOC_URL)
                     while True:
-                        bytes = download.read(1024*10)
+                        bytes = download.read(1024 * 10)
                         if not bytes:
                             break
                         else:
@@ -114,7 +114,8 @@ class BuildApidocsCommand(BuildCommand):
         if actual_md5 != YUIDOC_MD5:
             raise BuildError(
                 'YUI Doc checksum error. File: %s, '
-                'Expected: %s, Got: %s' % (yuizip_path, YUIDOC_MD5, actual_md5))
+                'Expected: %s, '
+                'Got: %s' % (yuizip_path, YUIDOC_MD5, actual_md5))
         else:
             self.log.debug('YUI Doc checksum verified')
 
@@ -145,7 +146,7 @@ class BuildApidocsCommand(BuildCommand):
                     workingbranch_dir, 'jarmonbuild', 'yuidoc_template'),),
             '--version=%s' % (buildversion,),
             '--project=%s' % (JARMON_PROJECT_TITLE,),
-            '--projecturl=%s' % (JARMON_PROJECT_URL,)
+            '--projecturl=%s' % (JARMON_PROJECT_URL,),
         ), stdout=PIPE, stderr=PIPE,)
 
         shutil.rmtree(yuidoc_dir)
@@ -181,20 +182,20 @@ class BuildReleaseCommand(BuildCommand):
         if status != 0:
             raise BuildError('bzr export failure. Status: %r' % (status,))
 
-
         self.log.debug('Record the branch version')
         from bzrlib.branch import Branch
         from bzrlib.version_info_formats import format_python
         v = format_python.PythonVersionInfoBuilder(
             Branch.open(workingbranch_dir))
-        versionfile_path = os.path.join(build_dir, 'jarmonbuild', '_version.py')
+
+        versionfile_path = os.path.join(
+            build_dir, 'jarmonbuild', '_version.py')
+
         with open(versionfile_path, 'w') as f:
             v.generate(f)
 
-
         self.log.debug('Generate apidocs')
         BuildApidocsCommand().main([buildversion])
-
 
         self.log.debug('Generate archive')
         archive_root = 'jarmon-%s' % (buildversion,)
@@ -205,7 +206,7 @@ class BuildReleaseCommand(BuildCommand):
                 for file in files:
                     z.write(
                         os.path.join(root, file),
-                        os.path.join(archive_root, root[prefix_len:], file)
+                        os.path.join(archive_root, root[prefix_len:], file),
                     )
         finally:
             z.close()
@@ -233,14 +234,17 @@ class BuildTestDataCommand(BuildCommand):
         rows = 12
         step = 10
 
-        dss.append(DataSource(dsName='speed', dsType='GAUGE', heartbeat=2*step))
+        dss.append(
+            DataSource(dsName='speed', dsType='GAUGE', heartbeat=2 * step))
         rras.append(RRA(cf='AVERAGE', xff=0.5, steps=1, rows=rows))
         rras.append(RRA(cf='AVERAGE', xff=0.5, steps=12, rows=rows))
         my_rrd = RRD(filename, ds=dss, rra=rras, start=start, step=step)
         my_rrd.create()
 
-        for i, t in enumerate(range(start+step, start+step+(rows*step), step)):
-            self.log.debug('DATA: %s %s (%s)' % (t, i, datetime.fromtimestamp(t)))
+        for i, t in enumerate(
+            range(start + step, start + step + (rows * step), step)):
+            self.log.debug(
+                'DATA: %s %s (%s)' % (t, i, datetime.fromtimestamp(t)))
             my_rrd.bufferValue(t, i)
 
         # Add further data 1 second later to demonstrate that the rrd
