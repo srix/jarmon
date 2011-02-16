@@ -90,12 +90,14 @@ class BuildApidocsCommand(BuildCommand):
         if os.path.exists(yuizip_path):
             self.log.debug('Using cached YUI doc')
 
-            def producer():
+            def producer_local():
                 yield open(yuizip_path).read()
+
+            producer = producer_local
         else:
             self.log.debug('Downloading YUI Doc')
 
-            def producer():
+            def producer_remote():
                 with open(yuizip_path, 'w') as yuizip:
                     download = urlopen(YUIDOC_URL)
                     while True:
@@ -105,6 +107,8 @@ class BuildApidocsCommand(BuildCommand):
                         else:
                             yuizip.write(bytes)
                             yield bytes
+
+            producer = producer_remote
 
         checksum = hashlib.md5()
         for bytes in producer():
