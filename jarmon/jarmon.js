@@ -256,6 +256,18 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
             'lastUpdated': lastUpdated*1000.0};
 };
 
+
+jarmon.RrdQuery.prototype.getDSNames = function() {
+    /**
+     * Return a list of RRD Data Source names
+     *
+     * @method getDSNames
+     * @return {Array} An array of DS names.
+     **/
+    return this.rrd.getDSNames();
+};
+
+
 /**
  * A wrapper around RrdQuery which provides asynchronous access to the data in a
  * remote RRD file.
@@ -275,23 +287,11 @@ jarmon.RrdQueryRemote = function(url, unit, downloader) {
     this._download = null;
 };
 
-jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
-    /**
-     * Return a Flot compatible data series asynchronously.
-     *
-     * @method getData
-     * @param startTime {Number} The start timestamp
-     * @param endTime {Number} The end timestamp
-     * @param dsId {Variant} identifier of the RRD datasource (string or number)
-     * @return {Object} A Deferred which calls back with a flot data series.
-     **/
-    var endTimestamp = endTime/1000;
 
-    // Download the rrd if there has never been a download or if the last
-    // completed download had a lastUpdated timestamp less than the requested
-    // end time.
-    // Don't start another download if one is already in progress.
-    if(!this._download || (this._download.fired > -1 && this.lastUpdate < endTimestamp )) {
+jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
+    // Download the rrd if there has never been a download and don't start
+    // another download if one is already in progress.
+    if(!this._download) {
         this._download = this.downloader(this.url)
                 .addCallback(
                     function(self, binary) {
@@ -307,9 +307,10 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
     // Set up a deferred which will call getData on the local RrdQuery object
     // returning a flot compatible data object to the caller.
     var ret = new MochiKit.Async.Deferred().addCallback(
-        function(self, startTime, endTime, dsId, rrd) {
-            return new jarmon.RrdQuery(rrd, self.unit).getData(startTime, endTime, dsId);
-        }, this, startTime, endTime, dsId);
+        function(self, methodName, args, rrd) {
+            var rq = new jarmon.RrdQuery(rrd, self.unit);
+            return rq[methodName].apply(rq, args);
+        }, this, methodName, args);
 
     // Add a pair of callbacks to the current download which will callback the
     // result which we setup above.
@@ -325,6 +326,35 @@ jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId) {
 
     return ret;
 };
+
+
+jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId, cfName) {
+    /**
+     * Return a Flot compatible data series asynchronously.
+     *
+     * @method getData
+     * @param startTime {Number} The start timestamp
+     * @param endTime {Number} The end timestamp
+     * @param dsId {Variant} identifier of the RRD datasource (string or number)
+     * @return {Object} A Deferred which calls back with a flot data series.
+     **/
+    if(this.lastUpdate < endTime/1000) {
+        this._download = null;
+    }
+    return this._callRemote('getData', [startTime, endTime, dsId, cfName]);
+};
+
+
+jarmon.RrdQueryRemote.prototype.getDSNames = function() {
+    /**
+     * Return a list of RRD Data Source names
+     *
+     * @method getDSNames
+     * @return {Object} A Deferred which calls back with an array of DS names.
+     **/
+    return this._callRemote('getDSNames');
+};
+
 
 /**
  * Wraps RrdQueryRemote to provide access to a different RRD DSs within a
@@ -364,11 +394,16 @@ jarmon.RrdQueryDsProxy.prototype.getData = function(startTime, endTime) {
  * @param options {Object} Flot options which control how the chart should be
  *      drawn.
  **/
-jarmon.Chart = function(template, options) {
+jarmon.Chart = function(template, recipe,  downloader) {
     this.template = template;
-    this.options = jQuery.extend(true, {yaxis: {}}, options);
+    this.recipe = recipe;
+    this.downloader = downloader;
+
+    this.options = jQuery.extend(true, {yaxis: {}}, recipe.options);
 
     this.data = [];
+
+    this.setup();
 
     var self = this;
 
@@ -379,7 +414,6 @@ jarmon.Chart = function(template, options) {
         self.switchDataEnabled($(this).text());
         self.draw();
     });
-
 
     this.options['yaxis']['ticks'] = function(axis) {
         /*
@@ -440,6 +474,29 @@ jarmon.Chart = function(template, options) {
 
         return ticks;
     };
+};
+
+jarmon.Chart.prototype.setup = function() {
+    this.template.find('.title').text(this.recipe['title']);
+    this.data = [];
+    var recipe = this.recipe;
+    var dataDict = {};
+    for(var j=0; j<recipe['data'].length; j++) {
+        var rrd = recipe['data'][j][0];
+        var ds = recipe['data'][j][1];
+        // Test for integer DS index as opposed to DS name
+        var dsi = parseInt(ds);
+        if(ds.toString() == dsi.toString()) {
+            ds = dsi;
+        }
+        var label = recipe['data'][j][2];
+        var unit = recipe['data'][j][3];
+
+        if(typeof dataDict[rrd] == 'undefined') {
+            dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, this.downloader);
+        }
+        this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
+    }
 };
 
 jarmon.Chart.prototype.addData = function(label, db, enabled) {
@@ -568,13 +625,15 @@ jarmon.Chart.prototype.draw = function() {
                     // to accomodate the color box
                     var legend = self.template.find('.graph-legend').show();
                     legend.empty();
-                    self.template.find('.legendLabel')
-                        .each(function(i, el) {
+                    self.template.find('.legendLabel').each(
+                        function(i, el) {
                             var orig = $(el);
                             var label = orig.text();
-                            var newEl = $('<div />')
-                                .attr('class', 'legendItem')
-                                .attr('title', 'Data series switch - click to turn this data series on or off')
+                            var newEl = $('<div />', {
+                                'class': 'legendItem',
+                                'title': 'Data series switch - click to turn \
+                                          this data series on or off'
+                            })
                                 .width(orig.width()+20)
                                 .text(label)
                                 .prepend(orig.prev().find('div div').clone().addClass('legendColorBox'))
@@ -585,8 +644,8 @@ jarmon.Chart.prototype.draw = function() {
                             if( $.inArray(label, disabled) > -1 ) {
                                 newEl.addClass('disabled');
                             }
-                        })
-                        .remove();
+                        }
+                    ).remove();
                     legend.append($('<div />').css('clear', 'both'));
                     self.template.find('.legend').remove();
 
@@ -608,49 +667,513 @@ jarmon.Chart.prototype.draw = function() {
 };
 
 
-jarmon.Chart.fromRecipe = function(recipes, templateFactory, downloader) {
-    /**
-     * A static factory method to generate a list of I{Chart} from a list of
-     * recipes and a list of available rrd files in collectd path format.
-     *
-     * @method fromRecipe
-     * @param recipes {Array} A list of recipe objects.
-     * @param templateFactory {Function} A callable which generates an html
-     *      template for a chart.
-     * @param downloader {Function} A download function which returns a Deferred
-     * @return {Array} A list of Chart objects
-     **/
+/**
+ * Generate a form through which to choose a data source from a remote RRD file
+ *
+ * @class jarmon.RrdChooser
+ * @constructor
+ **/
+jarmon.RrdChooser = function($tpl) {
+    this.$tpl = $tpl;
+    this.data = {
+        rrdUrl: '',
+        dsName: '',
+        dsLabel: '',
+        dsUnit:''
+    };
+};
 
-    var charts = [];
-    var dataDict = {};
+jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
+    var self = this;
+    this.$tpl.empty();
 
-    var recipe, chartData, template, c, i, j, ds, label, rrd, unit, re, match;
+    $('<form/>').append(
+        $('<div/>').append(
+            $('<p/>').text('Enter the URL of an RRD file'),
+            $('<label/>').append(
+                'URL: ',
+                $('<input/>', {
+                    type: 'text',
+                    name: 'rrd_url',
+                    value: this.data.rrdUrl
+                })
+            ),
+            $('<input/>', {type: 'submit', value: 'download'}),
+            $('<div/>', {class: 'next'})
+        )
+    ).submit(
+        function(e) {
+            self.data.rrdUrl = this['rrd_url'].value;
+            $placeholder = $(this).find('.next').empty();
+            new jarmon.RrdQueryRemote(self.data.rrdUrl).getDSNames().addCallback(
+                function($placeholder, dsNames) {
+                    if(dsNames.length > 1) {
+                        $('<p/>').text(
+                            'The RRD file contains multiple data sources. \
+                             Choose one:').appendTo($placeholder);
 
-    for(i=0; i<recipes.length; i++) {
-        recipe = recipes[i];
-        chartData = [];
-
-        for(j=0; j<recipe['data'].length; j++) {
-            rrd = recipe['data'][j][0];
-            ds = recipe['data'][j][1];
-            label = recipe['data'][j][2];
-            unit = recipe['data'][j][3];
-            if(typeof dataDict[rrd] == 'undefined') {
-                dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, downloader);
-            }
-            chartData.push([label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds)]);
+                        $(dsNames).map(
+                            function(i, el) {
+                                return $('<input/>', {
+                                    type: 'button',
+                                    value: el
+                                }
+                            ).click(
+                                function(e) {
+                                    self.data.dsName = this.value;
+                                    self.drawDsLabelForm();
+                                }
+                            );
+                        }).appendTo($placeholder);
+                    } else {
+                        self.data.dsName = dsNames[0];
+                        self.drawDsLabelForm();
+                    }
+                }, $placeholder
+            ).addErrback(
+                function($placeholder, err) {
+                    $('<p/>', {'class': 'error'}).text(err.toString()).appendTo($placeholder);
+                }, $placeholder
+            );
+            return false;
         }
-        if(chartData.length > 0) {
-            template = templateFactory();
-            template.find('.title').text(recipe['title']);
-            c = new jarmon.Chart(template, recipe['options']);
-            for(j=0; j<chartData.length; j++) {
-                c.addData.apply(c, chartData[j]);
+    ).appendTo(this.$tpl);
+}
+
+jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
+    var self = this;
+    this.$tpl.empty();
+
+    $('<form/>').append(
+        $('<p/>').text('Choose a label and unit for this data source.'),
+        $('<div/>').append(
+            $('<label/>').append(
+                'Label: ',
+                $('<input/>', {
+                    type: 'text',
+                    name: 'dsLabel',
+                    value: this.data.dslabel || this.data.dsName
+                })
+            )
+        ),
+        $('<div/>').append(
+            $('<label/>').append(
+                'Unit: ',
+                $('<input/>', {
+                    type: 'text',
+                    name: 'dsUnit',
+                    value: this.data.dsUnit
+                })
+            )
+        ),
+        $('<input/>', {type: 'button', value: 'back'}).click(
+            function(e) {
+                self.drawRrdUrlForm();
             }
-            charts.push(c);
+        ),
+        $('<input/>', {type: 'submit', value: 'save'}),
+        $('<div/>', {class: 'next'})
+    ).submit(
+        function(e) {
+            self.data.dsLabel = this['dsLabel'].value;
+            self.data.dsUnit = this['dsUnit'].value;
+            self.drawDsSummary();
+            return false;
+        }
+    ).appendTo(this.$tpl);
+};
+
+
+jarmon.RrdChooser.prototype.drawDsSummary = function() {
+    var self = this;
+    this.$tpl.empty();
+
+    jQuery.each(this.data, function(i, el) {
+        $('<p/>').append(
+            $('<strong/>').text(i),
+            [': ', el].join('')
+        ).appendTo(self.$tpl);
+    });
+
+    this.$tpl.append(
+        $('<input/>', {type: 'button', value: 'back'}).click(
+            function(e) {
+                self.drawDsLabelForm();
+            }
+        ),
+        $('<input/>', {type: 'button', value: 'finish'})
+    );
+};
+
+
+jarmon.ChartEditor = function($tpl, chart) {
+    this.$tpl = $tpl;
+    this.chart = chart;
+
+    $('form', this.$tpl[0]).live(
+        'submit',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self.chart.recipe.title = this['title'].value;
+            self.chart.recipe.data = $(this).find('.datasources tbody tr').map(
+                function(i, el) {
+                    return $(el).find('input[type=text]').map(
+                        function(i, el) {
+                            return el.value;
+                        }
+                    );
+                }
+            );
+            self.chart.setup();
+            self.chart.draw();
+            return false;
+        }
+    );
+
+    $('form', this.$tpl[0]).live(
+        'reset',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self.draw();
+            return false;
+        }
+    );
+
+    $('form input[name=datasource_delete]', this.$tpl[0]).live(
+        'click',
+        function(e) {
+            $(this).closest('tr').remove();
+        }
+    );
+
+    $('form input[name=datasource_add]', this.$tpl[0]).live(
+        'click',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            self._addDatasourceRow(
+                self._extractRowValues(
+                    $(this).closest('tr')
+                )
+            );
+            $(this).closest('tr').find('input[type=text]').val('');
+        }
+    );
+};
+
+jarmon.ChartEditor.prototype.draw = function() {
+    var self = this;
+    this.$tpl.empty();
+
+    $('<form/>').append(
+        $('<div/>').append(
+            $('<label/>').append(
+                'Title: ',
+                $('<input/>', {
+                    type: 'text',
+                    name: 'title',
+                    value: this.chart.recipe.title
+                })
+            )
+        ),
+        $('<fieldset/>').append(
+            $('<legend/>').text('Data Sources'),
+            $('<table/>', {'class': 'datasources'}).append(
+                $('<thead/>').append(
+                    $('<tr/>').append(
+                        $('<th/>').text('RRD File'),
+                        $('<th/>').text('DS Name'),
+                        $('<th/>').text('DS Label'),
+                        $('<th/>').text('DS Unit'),
+                        $('<th/>')
+                    )
+                ),
+                $('<tfoot/>').append(
+                    $('<tr/>').append(
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {type: 'text'})
+                        ),
+                        $('<td/>').append(
+                            $('<input/>', {
+                                type: 'button',
+                                value: 'add',
+                                name: 'datasource_add'
+                            })
+                        )
+                    )
+                ),
+                $('<tbody/>')
+            )
+        ),
+        $('<input/>', {type: 'submit', value: 'save'}),
+        $('<input/>', {type: 'reset', value: 'reset'})
+    ).appendTo(this.$tpl);
+
+    for(var i=0; i<this.chart.recipe.data.length; i++) {
+        this._addDatasourceRow(this.chart.recipe.data[i]);
+    }
+};
+
+
+jarmon.ChartEditor.prototype._extractRowValues = function($row) {
+    return $row.find('input[type=text]').map(
+        function(i, el) {
+            return el.value;
+        }
+    )
+};
+
+
+jarmon.ChartEditor.prototype._addDatasourceRow = function(record) {
+    $('<tr/>').append(
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[0]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[1]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[2]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {type: 'text', value: record[3]})
+        ),
+        $('<td/>').append(
+            $('<input/>', {
+                type: 'button',
+                value: 'delete',
+                name: 'datasource_delete'
+            })
+        )
+    ).appendTo(this.$tpl.find('.datasources tbody'));
+};
+
+
+jarmon.TabbedInterface = function($tpl, recipe) {
+    this.$tpl = $tpl;
+    this.recipe = recipe;
+    this.placeholders = [];
+
+    this.$tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
+
+    // Icon and hidden input box for adding new tabs. See event handlers below.
+    this.$newTabControls = $('<li/>', {
+        'class': 'newTabControls',
+        'title': 'Add new tab'
+    }).append(
+        $('<img/>', {src: 'assets/icons/next.gif'}),
+        $('<input/>', {'type': 'text'}).hide()
+    ).appendTo(this.$tabBar);
+
+    this.$tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
+    var tabName, $tabPanel, placeNames;
+    for(var i=0; i<recipe.length; i++) {
+        tabName = recipe[i][0];
+        placeNames = recipe[i][1];
+
+        $tabPanel = this.newTab(tabName);
+
+        for(var j=0; j<placeNames.length; j++) {
+            this.placeholders.push([
+                placeNames[j], $('<div/>').appendTo($tabPanel)]);
         }
     }
-    return charts;
+
+    this.setup();
+
+    // Show the new tab name input box when the user clicks the new tab icon
+    $('ul.css-tabs > li.newTabControls > img', $tpl[0]).live(
+        'click',
+        function(e) {
+            $(this).hide().siblings().show().focus();
+        }
+    );
+
+    // When the "new" tab input loses focus, use its value to create a new
+    // tab.
+    // XXX: Due to event bubbling, this event seems to be triggered twice, but
+    // only when the input is forcefully blurred by the "keypress" event handler
+    // below. To prevent two tabs, we blank the input field value. Tried
+    // preventing event bubbling, but there seems to be some subtle difference
+    // with the use of jquery live event handlers.
+    $('ul.css-tabs > li.newTabControls > input', $tpl[0]).live(
+        'blur',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            var value = this.value;
+            this.value = '';
+            $(this).hide().siblings().show();
+            if(value) {
+                self.newTab(value);
+                self.setup();
+                self.$tabBar.data("tabs").click(value);
+            }
+        }
+    );
+
+    // Unfocus the input element when return key is pressed. Triggers a
+    // blur event which then replaces the input with a tab
+    $('ul.css-tabs > li > input', $tpl[0]).live(
+        'keypress',
+        function(e) {
+            if(e.which == 13) {
+                $(this).blur();
+            }
+        }
+    );
+
+    // Show tab name input box when tab is double clicked.
+    $('ul.css-tabs > li > a', $tpl[0]).live(
+        'dblclick',
+        {self: this},
+        function(e) {
+            var $originalLink = $(this);
+            var $input = $('<input/>', {
+                'value': $originalLink.text(),
+                'name': 'editTabTitle',
+                'type': 'text'
+            })
+            $originalLink.replaceWith($input);
+            $input.focus();
+        }
+    );
+
+    // Handle the updating of the tab when its name is edited.
+    $('ul.css-tabs > li > input[name=editTabTitle]', $tpl[0]).live(
+        'blur',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            $(this).replaceWith(
+                $('<a/>', {
+                    href: ['#', this.value].join('')
+                }).text(this.value)
+            )
+            self.setup();
+            self.$tabBar.data("tabs").click(this.value);
+        }
+    );
+
+    $('input[name=add_new_chart]', $tpl[0]).live(
+        'click',
+        {self: this},
+        function(e) {
+            console.log(e);
+        }
+    );
+};
+
+jarmon.TabbedInterface.prototype.newTab = function(tabName) {
+    // Add a tab
+    $('<li/>').append(
+        $('<a/>', {href: ['#', tabName].join('')}).text(tabName)
+    ).appendTo(this.$tabBar);
+    var $placeholder = $('<div/>');
+    // Add tab panel
+    $('<div/>').append(
+        $placeholder,
+        $('<div/>', {'class': 'tab-controls'}).append(
+            $('<input/>', {
+                type: 'button',
+                value: 'Add new chart',
+                name: 'add_new_chart'
+            })
+        )
+    ).appendTo(this.$tabPanels);
+
+    return $placeholder;
+};
+
+jarmon.TabbedInterface.prototype.setup = function() {
+    this.$newTabControls.remove();
+    // Destroy then re-initialise the jquerytools tabs plugin
+    var api = this.$tabBar.data("tabs");
+    if(api) {
+        api.destroy();
+    }
+    this.$tabBar.tabs(this.$tabPanels.children('div'));
+    this.$newTabControls.appendTo(this.$tabBar);
+};
+
+
+jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
+                                      $tabTemplate, tabRecipes,
+                                      $controlPanelTemplate) {
+    /**
+     * Setup chart date range controls and all charts
+     **/
+    var p = new jarmon.Parallimiter(1);
+    function serialDownloader(url) {
+        return p.addCallable(jarmon.downloadBinary, [url]);
+    }
+
+    var ti = new jarmon.TabbedInterface($tabTemplate, tabRecipes);
+
+    var charts = jQuery.map(
+        ti.placeholders,
+        function(el, i) {
+            var chart = new jarmon.Chart(
+                $chartTemplate.clone().appendTo(el[1]),
+                chartRecipes[el[0]],
+                serialDownloader
+            );
+
+            $('input[name=chart_edit]', el[1][0]).live(
+                'click',
+                {chart: chart},
+                function(e) {
+                    var chart = e.data.chart;
+                    new jarmon.ChartEditor(
+                        chart.template.find('.graph-legend'), chart).draw();
+                }
+            );
+
+            $('input[name=chart_delete]', el[1][0]).live(
+                'click',
+                {chart: chart},
+                function(e) {
+                    var chart = e.data.chart;
+                    chart.template.remove();
+                }
+            );
+
+            return chart;
+        }
+    );
+
+    var cc = new jarmon.ChartCoordinator($controlPanelTemplate, charts);
+    // Update charts when tab is clicked
+    ti.$tpl.find(".css-tabs:first").bind(
+        'click',
+        {'cc': cc},
+        function(e) {
+            var cc = e.data.cc;
+            // XXX: Hack to give the tab just enough time to become visible
+            // so that flot can calculate chart dimensions.
+            window.clearTimeout(cc.t);
+            cc.t = window.setTimeout(
+                function() {
+                    cc.update();
+                }, 100);
+        }
+    );
+
+    // Initialise all the charts
+    cc.init();
+
+    return [charts, ti, cc];
 };
 
 
@@ -720,10 +1243,10 @@ jarmon.timeRangeShortcuts = [
  * @param ui {Object} A one element jQuery containing an input form and
  *      placeholders for the timeline and for the series of charts.
  **/
-jarmon.ChartCoordinator = function(ui) {
+jarmon.ChartCoordinator = function(ui, charts) {
     var self = this;
     this.ui = ui;
-    this.charts = [];
+    this.charts = charts;
 
     // Style and configuration of the range timeline
     this.rangePreviewOptions = {
@@ -817,11 +1340,107 @@ jarmon.ChartCoordinator = function(ui) {
 
     // When a selection is made on the range timeline, or any of my charts
     // redraw all the charts.
-    this.ui.bind("plotselected", function(event, ranges) {
-        self.ui.find('[name="from_standard"]').val('custom');
-        self.setTimeRange(ranges.xaxis.from, ranges.xaxis.to);
-        self.update();
-    });
+    $(document).bind(
+        'plotselected',
+        {self: this},
+        function(e, ranges) {
+            var self = e.data.self;
+            var eventSourceIsMine = false;
+
+            // plotselected event may be from my range selector chart or
+            if( self.ui.has(e.target) ) {
+                eventSourceIsMine = true;
+            } else {
+                // ...it may come from one of the charts under my supervision
+                for(var i=0; i<self.charts.length; i++) {
+                    if(self.charts[i].template.has(e.target).length > 0) {
+                        eventSourceIsMine = true;
+                        break;
+                    }
+                }
+            }
+
+            if(eventSourceIsMine) {
+                // Update the prepared time range select box to value "custom"
+                self.ui.find('[name="from_standard"]').val('custom');
+
+                // Update all my charts
+                self.setTimeRange(ranges.xaxis.from, ranges.xaxis.to);
+                self.update();
+            }
+        }
+    );
+
+    // Add dhtml calendars to the date input fields
+    this.ui.find(".timerange_control img")
+        .dateinput({
+            'format': 'dd mmm yyyy 00:00:00',
+            'max': +1,
+            'css': {'input': 'jquerytools_date'}})
+        .bind('onBeforeShow', function(e) {
+            var classes = $(this).attr('class').split(' ');
+            var currentDate, input_selector;
+            for(var i=0; i<=classes.length; i++) {
+                input_selector = '[name="' + classes[i] + '"]';
+                // Look for a neighboring input element whose name matches the
+                // class name of this calendar
+                // Parse the value as a date if the returned date.getTime
+                // returns NaN we know it's an invalid date
+                // XXX: is there a better way to check for valid date?
+                currentDate = new Date($(this).siblings(input_selector).val());
+                if(currentDate.getTime() != NaN) {
+                    $(this).data('dateinput')._input_selector = input_selector;
+                    $(this).data('dateinput')._initial_val = currentDate.getTime();
+                    $(this).data('dateinput').setValue(currentDate);
+                    break;
+                }
+            }
+        })
+        .bind('onHide', function(e) {
+            // Called after a calendar date has been chosen by the user.
+
+            // Use the sibling selector that we generated above before opening
+            // the calendar
+            var input_selector = $(this).data('dateinput')._input_selector;
+            var oldStamp = $(this).data('dateinput')._initial_val;
+            var newDate = $(this).data('dateinput').getValue();
+            // Only update the form field if the date has changed.
+            if(oldStamp != newDate.getTime()) {
+                $(this).siblings(input_selector).val(
+                    newDate.toString().split(' ').slice(1,5).join(' '));
+                // Trigger a change event which should automatically update the
+                // graphs and change the timerange drop down selector to
+                // "custom"
+                $(this).siblings(input_selector).trigger('change');
+            }
+        });
+
+    // Avoid overlaps between the calendars
+    // XXX: This is a bit of hack, what if there's more than one set of calendar
+    // controls on a page?
+    this.ui.find(".timerange_control img.from_custom").bind(
+        'onBeforeShow',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            var otherVal = new Date(
+                self.ui.find('.timerange_control [name="to_custom"]').val());
+
+            $(this).data('dateinput').setMax(otherVal);
+        }
+    );
+    this.ui.find(".timerange_control img.to_custom").bind(
+        'onBeforeShow',
+        {self: this},
+        function(e) {
+            var self = e.data.self;
+            var otherVal = new Date(
+                self.ui.find('.timerange_control [name="from_custom"]').val());
+
+            $(this).data('dateinput').setMin(otherVal);
+        }
+    );
+
 };
 
 

@@ -9,11 +9,7 @@ form div {
 }
 
 h2 {
-    padding: 0 0 0 55px;
-    margin: 20px auto 5px auto;
     font-size: 14px;
-    text-align: left;
-    clear: both;
 }
 
 p, li, dt, dd, td, th, div {
@@ -36,6 +32,7 @@ p, li, dt, dd, td, th, div {
     height:200px;
     width: 850px;
     margin: 0 auto 0 auto;
+    clear: both;
 }
 
 .tickLabel {
@@ -75,6 +72,11 @@ input[type=checkbox] {
     border: none;
 }
 
+input[type=text] {
+    padding: 3px;
+    border: 1px solid #EEE;
+}
+
 .notice {
     border: 1px solid Green;
     background: #FFDDFF;
@@ -84,4 +86,35 @@ input[type=checkbox] {
 
 #calroot {
     z-index: 2;
+}
+
+.chart-header {
+    width: 790px;
+    padding: 5px 0 5px 0;
+    margin: 20px auto 0 auto;
+    position: relative;
+    left: 25px;
+}
+
+.chart-header:AFTER {
+    content: ''
+}
+
+.chart-container h2{
+    float: left;
+    margin: 0;
+}
+
+.chart-container .chart-controls{
+    float: right;
+    margin: 0;
+}
+
+.tab-controls {
+    width: 790px;
+    padding: 5px 0 5px 0;
+    margin: 20px auto 0 auto;
+    text-align: right;
+    position: relative;
+    left: 25px;
 }
