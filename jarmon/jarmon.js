@@ -63,10 +63,11 @@ jarmon.downloadBinary = function(url) {
             // differently.
             if(textStatus == 'parsererror') {
                 if (typeof xhr.responseBody != 'undefined') {
-                    return this.success(xhr.responseBody);
+                    this.success(xhr.responseBody);
                 }
+            } else {
+                this._deferredResult.errback(new Error(xhr.status));
             }
-            this._deferredResult.errback(new Error(xhr.status));
         }
     });
     return d;
@@ -240,10 +241,10 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
 
     var val;
     var timestamp = startRowTime;
-    for(var i=startRowIndex; i<endRowIndex; i++) {
-        val = rra.getEl(i, dsIndex)
+    for(i=startRowIndex; i<endRowIndex; i++) {
+        val = rra.getEl(i, dsIndex);
         flotData.push([timestamp*1000.0, val]);
-        timestamp += step
+        timestamp += step;
     }
 
     // Now get the date of the earliest record in entire rrd file, ie that of
@@ -429,7 +430,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
             2: 'M',
             3: 'G',
             4: 'T'
-        }
+        };
         var si = 0;
         while(true) {
             if( Math.pow(1000, si+1)*0.9 > axis.max ) {
@@ -446,7 +447,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
 
         var stepSize, decimalPlaces = 0;
         for(var i=0; i<stepSizes.length; i++) {
-            stepSize = stepSizes[i]
+            stepSize = stepSizes[i];
             if( realStep < stepSize ) {
                 if(stepSize < 10) {
                     decimalPlaces = 2;
@@ -460,7 +461,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
         }
 
         var tickMin = minVal - minVal % stepSize;
-        var tickMax = maxVal - maxVal % stepSize + stepSize
+        var tickMax = maxVal - maxVal % stepSize + stepSize;
 
         var ticks = [];
         for(var j=tickMin; j<=tickMax; j+=stepSize) {
@@ -543,7 +544,7 @@ jarmon.Chart.prototype.setTimeRange = function(startTime, endTime) {
     this.startTime = startTime;
     this.endTime = endTime;
     return this.draw();
-}
+};
 
 jarmon.Chart.prototype.draw = function() {
     /**
@@ -698,8 +699,8 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
                     value: this.data.rrdUrl
                 })
             ),
-            $('<input/>', {type: 'submit', value: 'download'}),
-            $('<div/>', {class: 'next'})
+            $('<input/>', {'type': 'submit', value: 'download'}),
+            $('<div/>', {'class': 'next'})
         )
     ).submit(
         function(e) {
@@ -738,7 +739,7 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
             return false;
         }
     ).appendTo(this.$tpl);
-}
+};
 
 jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
     var self = this;
@@ -772,7 +773,7 @@ jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
             }
         ),
         $('<input/>', {type: 'submit', value: 'save'}),
-        $('<div/>', {class: 'next'})
+        $('<div/>', {'class': 'next'})
     ).submit(
         function(e) {
             self.data.dsLabel = this['dsLabel'].value;
@@ -931,7 +932,7 @@ jarmon.ChartEditor.prototype._extractRowValues = function($row) {
         function(i, el) {
             return el.value;
         }
-    )
+    );
 };
 
 
@@ -1044,7 +1045,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
                 'value': $originalLink.text(),
                 'name': 'editTabTitle',
                 'type': 'text'
-            })
+            });
             $originalLink.replaceWith($input);
             $input.focus();
         }
@@ -1060,7 +1061,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
                 $('<a/>', {
                     href: ['#', this.value].join('')
                 }).text(this.value)
-            )
+            );
             self.setup();
             self.$tabBar.data("tabs").click(this.value);
         }
@@ -1307,7 +1308,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
     tzoffsetEl = this.ui.find('[name="tzoffset"]');
     if(tzoffsetEl.is('select')) {
         var label, val;
-        for(var i=-12; i<=12; i++) {
+        for(i=-12; i<=12; i++) {
             label = 'UTC';
             val = i;
             if(val >= 0) {
@@ -1475,7 +1476,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
     this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
 
     var chartsLoading = [];
-    for(var i=0; i<this.charts.length; i++){
+    for(i=0; i<this.charts.length; i++){
         this.charts[i].options.xaxis.tzoffset = tzoffset;
         // Don't render charts which are not currently visible
         if(this.charts[i].template.is(':visible')) {
@@ -1519,7 +1520,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
                            MONTH, MONTH*3, MONTH*6, YEAR];
 
             var range = ranges.xaxis.to - ranges.xaxis.from;
-            for(var i=0; i<periods.length; i++) {
+            for(i=0; i<periods.length; i++) {
                 if(range <= periods[i]) {
                     i++;
                     break;
