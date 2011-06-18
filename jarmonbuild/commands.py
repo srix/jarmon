@@ -24,7 +24,7 @@ import pkg_resources
 JARMON_PROJECT_TITLE = 'Jarmon'
 JARMON_PROJECT_URL = 'http://www.launchpad.net/jarmon'
 
-YUIDOC_URL = 'http://yuilibrary.com/downloads/yuidoc/yuidoc_1.0.0b1.zip'
+YUIDOC_URL = 'http://yui.zenfs.com/releases/yuidoc/yuidoc_1.0.0b1.zip'
 YUIDOC_MD5 = 'cd5545d2dec8f7afe3d18e793538162c'
 YUIDOC_DEPENDENCIES = ['setuptools', 'pygments', 'cheetah']
 
