@@ -275,30 +275,26 @@ class BuildJavascriptDependenciesCommand(BuildCommand):
     command_name = 'jsdeps'
 
     def main(self, argv):
-#        workingbranch_dir = self.workingbranch_dir
-        build_dir = self.build_dir
-
         self.log.debug('Compiling javascript dependencies')
 
-        # Define the parameters for the POST request and encode them in
-        # a URL-safe format.
-        sel = CSSSelector('script')
-        doc = html.parse(os.path.join(self.workingbranch_dir, 'docs/examples/index.html'))
-        external_scripts = [src for src in [
-                e.get('src', '') for e in sel(doc)] if src.startswith('http')]
+        depjs_path = os.path.join(
+            self.workingbranch_dir,
+            'docs/examples/assets/js/dependencies.js')
 
-        params = [('code_url', src) for src in external_scripts] + [
-                ('compilation_level', 'SIMPLE_OPTIMIZATIONS'),
-                ('output_format', 'text'),
-                ('output_info', 'compiled_code'),
-                ]
+        # Get the closure params from the original file
+        params = []
+        for line in  open(depjs_path):
+            line = line.strip()
+            if line.startswith('//'):
+                key, val = line.lstrip('/').strip().split(':', 1)
+                params.append((key.strip(), val.strip()))
 
         # Always use the following value for the Content-type header.
         headers = { "Content-type": "application/x-www-form-urlencoded" }
         conn = httplib.HTTPConnection('closure-compiler.appspot.com')
         conn.request('POST', '/compile', urllib.urlencode(params), headers)
         response = conn.getresponse()
-        with open(os.path.join(build_dir, 'dependencies.js'), 'w') as f:
+        with open(depjs_path, 'w') as f:
             for param in params:
                 f.write('// %s: %s\n' % param)
 
