@@ -1,18 +1,18 @@
-// code_url: https://raw.github.com/mochi/mochikit/master/MochiKit/Base.js
-// code_url: https://raw.github.com/mochi/mochikit/master/MochiKit/Async.js
-// code_url: http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js
-// code_url: http://flot.googlecode.com/svn/trunk/excanvas.js
-// code_url: http://flot.googlecode.com/svn/trunk/jquery.flot.js
-// code_url: http://flot.googlecode.com/svn/trunk/jquery.flot.stack.js
-// code_url: http://flot.googlecode.com/svn/trunk/jquery.flot.selection.js
-// code_url: http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/binaryXHR.js?revision=1.5&content-type=text%2Fplain
-// code_url: http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/rrdFile.js?revision=1.8&content-type=text%2Fplain
-// code_url: https://raw.github.com/jquerytools/jquerytools/master/src/dateinput/dateinput.js
-// code_url: https://raw.github.com/jquerytools/jquerytools/master/src/tabs/tabs.js
-// code_url: https://raw.github.com/jquerytools/jquerytools/master/src/toolbox/toolbox.history.js
-// compilation_level: SIMPLE_OPTIMIZATIONS
-// output_format: text
-// output_info: compiled_code
+// @code_url https://raw.github.com/mochi/mochikit/master/MochiKit/Base.js
+// @code_url https://raw.github.com/mochi/mochikit/master/MochiKit/Async.js
+// @code_url http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js
+// @code_url http://flot.googlecode.com/svn/trunk/excanvas.js
+// @code_url http://flot.googlecode.com/svn/trunk/jquery.flot.js
+// @code_url http://flot.googlecode.com/svn/trunk/jquery.flot.stack.js
+// @code_url http://flot.googlecode.com/svn/trunk/jquery.flot.selection.js
+// @code_url http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/binaryXHR.js?revision=1.5&content-type=text%2Fplain
+// @code_url http://javascriptrrd.cvs.sourceforge.net/viewvc/*checkout*/javascriptrrd/v0/src/lib/rrdFile.js?revision=1.8&content-type=text%2Fplain
+// @code_url https://raw.github.com/jquerytools/jquerytools/master/src/dateinput/dateinput.js
+// @code_url https://raw.github.com/jquerytools/jquerytools/master/src/tabs/tabs.js
+// @code_url https://raw.github.com/jquerytools/jquerytools/master/src/toolbox/toolbox.history.js
+// @compilation_level SIMPLE_OPTIMIZATIONS
+// @output_format text
+// @output_info compiled_code
 var MochiKit=MochiKit||{};if(typeof MochiKit.__export__=="undefined")MochiKit.__export__=!0;MochiKit.NAME="MochiKit";MochiKit.VERSION="1.5";MochiKit.__repr__=function(){return"["+this.NAME+" "+this.VERSION+"]"};MochiKit.toString=function(){return this.__repr__()};MochiKit.Base=MochiKit.Base||{};
 MochiKit.Base.module=function(a,b,c,e){var f=a[b]=a[b]||{},j=a.NAME?a.NAME+".":"";f.NAME=j+b;f.VERSION=c;f.__repr__=function(){return"["+this.NAME+" "+this.VERSION+"]"};f.toString=function(){return this.__repr__()};for(b=0;e!=null&&b<e.length;b++)if(!(e[b]in a))throw f.NAME+" depends on "+j+e[b]+"!";return f};MochiKit.Base.module(MochiKit,"Base","1.5",[]);
 MochiKit.Base.update=function(a){if(a===null||a===void 0)a={};for(var b=1;b<arguments.length;b++){var c=arguments[b];if(typeof c!="undefined"&&c!==null)for(var e in c)a[e]=c[e]}return a};

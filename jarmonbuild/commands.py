@@ -296,7 +296,7 @@ class BuildJavascriptDependenciesCommand(BuildCommand):
         response = conn.getresponse()
         with open(depjs_path, 'w') as f:
             for param in params:
-                f.write('// %s: %s\n' % param)
+                f.write('// @%s %s\n' % param)
 
             while not response.isclosed():
                 f.write(response.read(1024 * 10))
