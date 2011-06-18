@@ -11,6 +11,7 @@ import sys
 import httplib
 import urllib
 
+from datetime import datetime
 from optparse import OptionParser
 from subprocess import check_call, PIPE
 from tempfile import gettempdir
@@ -230,7 +231,6 @@ class BuildTestDataCommand(BuildCommand):
         Create an RRD file with values 0-9 entered at 1 second intervals from
         1980-01-01 00:00:00 (the first date that rrdtool allows)
         """
-        from datetime import datetime
         from pyrrd.rrd import DataSource, RRA, RRD
         start = int(datetime(1980, 1, 1, 0, 0).strftime('%s'))
         dss = []
@@ -292,6 +292,8 @@ class BuildJavascriptDependenciesCommand(BuildCommand):
         conn.request('POST', '/compile', urllib.urlencode(params), headers)
         response = conn.getresponse()
         with open(depjs_path, 'w') as f:
+            f.write(
+                '// Compiled with closure-compiler on %s\n' % (datetime.now()))
             for param in params:
                 f.write('// @%s %s\n' % param)
 
