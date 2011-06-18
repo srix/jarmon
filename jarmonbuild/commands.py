@@ -286,7 +286,7 @@ class BuildJavascriptDependenciesCommand(BuildCommand):
         for line in  open(depjs_path):
             line = line.strip()
             if line.startswith('//'):
-                key, val = line.lstrip('/').strip().split(':', 1)
+                key, val = line.lstrip('/ @').strip().split(':', 1)
                 params.append((key.strip(), val.strip()))
 
         # Always use the following value for the Content-type header.
