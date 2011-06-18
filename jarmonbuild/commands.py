@@ -301,7 +301,9 @@ class BuildJavascriptDependenciesCommand(BuildCommand):
         with open(os.path.join(build_dir, 'dependencies.js'), 'w') as f:
             for param in params:
                 f.write('// %s: %s\n' % param)
-            f.write(response.read())
+
+            while not response.isclosed():
+                f.write(response.read(1024 * 10))
 
         conn.close
 
