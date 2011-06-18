@@ -8,12 +8,17 @@ import logging
 import os
 import shutil
 import sys
+import httplib
+import urllib
 
 from optparse import OptionParser
 from subprocess import check_call, PIPE
 from tempfile import gettempdir
 from urllib2 import urlopen
 from zipfile import ZipFile, ZIP_DEFLATED
+
+from lxml.cssselect import CSSSelector
+from lxml import html
 
 import pkg_resources
 
@@ -261,11 +266,53 @@ class BuildTestDataCommand(BuildCommand):
         my_rrd.update()
 
 
+class BuildJavascriptDependenciesCommand(BuildCommand):
+    """
+    Export all source files, generate apidocs and create a zip archive for
+    upload to Launchpad.
+    """
+
+    command_name = 'jsdeps'
+
+    def main(self, argv):
+#        workingbranch_dir = self.workingbranch_dir
+        build_dir = self.build_dir
+
+        self.log.debug('Compiling javascript dependencies')
+
+        # Define the parameters for the POST request and encode them in
+        # a URL-safe format.
+        sel = CSSSelector('script')
+        doc = html.parse(os.path.join(self.workingbranch_dir, 'docs/examples/index.html'))
+        external_scripts = [src for src in [
+                e.get('src', '') for e in sel(doc)] if src.startswith('http')]
+
+        params = [('code_url', src) for src in external_scripts] + [
+                ('compilation_level', 'SIMPLE_OPTIMIZATIONS'),
+                ('output_format', 'text'),
+                ('output_info', 'compiled_code'),
+                ]
+
+        # Always use the following value for the Content-type header.
+        headers = { "Content-type": "application/x-www-form-urlencoded" }
+        conn = httplib.HTTPConnection('closure-compiler.appspot.com')
+        conn.request('POST', '/compile', urllib.urlencode(params), headers)
+        response = conn.getresponse()
+        with open(os.path.join(build_dir, 'dependencies.js'), 'w') as f:
+            for param in params:
+                f.write('// %s: %s\n' % param)
+            f.write(response.read())
+
+        conn.close
+
+
+
 # The available subcommands
 SUBCOMMAND_HANDLERS = [
     BuildApidocsCommand,
     BuildReleaseCommand,
     BuildTestDataCommand,
+    BuildJavascriptDependenciesCommand,
 ]
 
 
