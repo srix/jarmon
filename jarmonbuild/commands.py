@@ -17,9 +17,6 @@ from tempfile import gettempdir
 from urllib2 import urlopen
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from lxml.cssselect import CSSSelector
-from lxml import html
-
 import pkg_resources
 
 
