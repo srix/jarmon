@@ -110,7 +110,7 @@ jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
 	  throw new jarmon.InvalidBinaryFile(
           "Unsupported type " + (typeof strData));
 	}
-    
+
 	this.getRawData = function() {
 		return data;
 	};
@@ -248,21 +248,23 @@ jarmon.downloadBinary = function(url) {
             this._nativeXhr = jQuery.ajaxSettings.xhr();
             return this._nativeXhr;
         },
-        dataFilter: function(data, dataType) {
+        success: function(data, textStatus, jqXHR) {
             // In IE we return the responseBody
             if(typeof(this._nativeXhr.responseBody) != 'undefined') {
-                return new jarmon.BinaryFile(
+                d.callback(
+                    new jarmon.BinaryFile(
                         jarmon.GetIEByteArray_ByteStr(
-                            this._nativeXhr.responseBody));
+                            this._nativeXhr.responseBody)));
             } else {
-                return new jarmon.BinaryFile(data);
+                d.callback(new jarmon.BinaryFile(data));
             }
-        },
-        success: function(data, textStatus, jqXHR) {
-            d.callback(data);
         },
         error: function(xhr, textStatus, errorThrown) {
             d.errback(new Error(xhr.status));
+        },
+        complete: function(jqXHR, textStatus) {
+            this._nativeXhr = null;
+            delete this._nativeXhr;
         }
     });
     return d;
@@ -1310,7 +1312,7 @@ jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
     /**
      * Setup chart date range controls and all charts
      **/
-    var p = new jarmon.Parallimiter(1);
+    var p = new jarmon.Parallimiter(2);
     function serialDownloader(url) {
         return p.addCallable(jarmon.downloadBinary, [url]);
     }
