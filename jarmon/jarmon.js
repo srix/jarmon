@@ -41,7 +41,6 @@ jarmon.downloadBinary = function(url) {
     $.ajax({
         url: url,
         dataType: 'text',
-        ifModified: true,
         mimeType: 'text/plain; charset=x-user-defined',
         xhr: function() {
             // Save a reference to the native xhr object - we need it later
