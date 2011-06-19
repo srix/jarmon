@@ -45,20 +45,20 @@ if(typeof jarmon == 'undefined') {
 
 // ============================================================
 // Exception class
-function InvalidBinaryFile(msg) {
+jarmon.InvalidBinaryFile = function(msg) {
   this.message=msg;
   this.name="Invalid BinaryFile";
-}
+};
 
 // pretty print
-InvalidBinaryFile.prototype.toString = function() {
+jarmon.InvalidBinaryFile.prototype.toString = function() {
   return this.name + ': "' + this.message + '"';
-}
+};
 
 // =====================================================================
 // BinaryFile class
 //   Allows access to element inside a binary stream
-function BinaryFile(strData, iDataOffset, iDataLength) {
+jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
 	var data = strData;
 	var dataOffset = iDataOffset || 0;
 	var dataLength = 0;
@@ -84,7 +84,8 @@ function BinaryFile(strData, iDataOffset, iDataLength) {
 			return IEBinary_getByteAt(data, iOffset + dataOffset);
 		};
 	} else {
-	  throw new InvalidBinaryFile("Unsupported type " + (typeof strData));
+	  throw new jarmon.InvalidBinaryFile(
+          "Unsupported type " + (typeof strData));
 	}
 
 	this.getLength = function() {
@@ -100,7 +101,8 @@ function BinaryFile(strData, iDataOffset, iDataLength) {
 	};
 
 	this.getShortAt = function(iOffset) {
-		var iShort = (this.getByteAt(iOffset + 1) << 8) + this.getByteAt(iOffset);
+		var iShort = (
+            this.getByteAt(iOffset + 1) << 8) + this.getByteAt(iOffset);
 		if (iShort < 0) iShort += 65536;
 		return iShort;
 	};
@@ -139,7 +141,8 @@ function BinaryFile(strData, iDataOffset, iDataLength) {
 	// Added
 	this.getCStringAt = function(iOffset, iMaxLength) {
 		var aStr = [];
-		for (var i=iOffset,j=0;(i<iOffset+iMaxLength) && (this.getByteAt(i)>0);i++,j++) {
+		for (var i=iOffset,j=0;(i<iOffset+iMaxLength) &&
+             (this.getByteAt(i)>0);i++,j++) {
 			aStr[j] = String.fromCharCode(this.getByteAt(i));
 		}
 		return aStr.join("");
@@ -232,9 +235,9 @@ jarmon.downloadBinary = function(url) {
         dataFilter: function(data, dataType) {
             // In IE we return the responseBody
             if(typeof(this._nativeXhr.responseBody) != 'undefined') {
-                return new BinaryFile(this._nativeXhr.responseBody);
+                return new jarmon.BinaryFile(this._nativeXhr.responseBody);
             } else {
-                return new BinaryFile(data);
+                return new jarmon.BinaryFile(data);
             }
         },
         success: function(data, textStatus, jqXHR) {
