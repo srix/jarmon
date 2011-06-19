@@ -38,36 +38,30 @@ jarmon.downloadBinary = function(url) {
      */
 
     var d = new MochiKit.Async.Deferred();
-
     $.ajax({
-        _deferredResult: d,
         url: url,
         dataType: 'text',
-        cache: false,
-        beforeSend: function(request) {
-            try {
-                request.overrideMimeType('text/plain; charset=x-user-defined');
-            } catch(e) {
-                // IE doesn't support overrideMimeType
+        ifModified: true,
+        mimeType: 'text/plain; charset=x-user-defined',
+        xhr: function() {
+            // Save a reference to the native xhr object - we need it later
+            // in IE to access the binary data from responseBody
+            this._nativeXhr = jQuery.ajaxSettings.xhr();
+            return this._nativeXhr;
+        },
+        dataFilter: function(data, dataType) {
+            // In IE we return the responseBody
+            if(typeof(this._nativeXhr.responseBody) != 'undefined') {
+                return new BinaryFile(this._nativeXhr.responseBody);
+            } else {
+                return new BinaryFile(data);
             }
         },
-        success: function(data) {
-            try {
-                this._deferredResult.callback(new BinaryFile(data));
-            } catch(e) {
-                this._deferredResult.errback(e);
-            }
+        success: function(data, textStatus, jqXHR) {
+            d.callback(data);
         },
         error: function(xhr, textStatus, errorThrown) {
-            // Special case for IE which handles binary data slightly
-            // differently.
-            if(textStatus == 'parsererror') {
-                if (typeof xhr.responseBody != 'undefined') {
-                    this.success(xhr.responseBody);
-                }
-            } else {
-                this._deferredResult.errback(new Error(xhr.status));
-            }
+            d.errback(new Error(xhr.status));
         }
     });
     return d;
