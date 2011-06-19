@@ -27,7 +27,43 @@ if(typeof jarmon == 'undefined') {
     var jarmon = {};
 }
 
+// A VBScript and Javascript helper function to convert IE responseBody to a
+// byte string.
+// http://miskun.com/javascript/internet-explorer-and-binary-files-data-access/
+var IEBinaryToArray_ByteStr_Script =
+	"<!-- IEBinaryToArray_ByteStr -->\r\n"+
+	"<script type='text/vbscript'>\r\n"+
+	"Function IEBinaryToArray_ByteStr(Binary)\r\n"+
+	"	IEBinaryToArray_ByteStr = CStr(Binary)\r\n"+
+	"End Function\r\n"+
+	"Function IEBinaryToArray_ByteStr_Last(Binary)\r\n"+
+	"	Dim lastIndex\r\n"+
+	"	lastIndex = LenB(Binary)\r\n"+
+	"	if lastIndex mod 2 Then\r\n"+
+	"		IEBinaryToArray_ByteStr_Last = Chr( AscB( MidB( Binary, lastIndex, 1 ) ) )\r\n"+
+	"	Else\r\n"+
+	"		IEBinaryToArray_ByteStr_Last = "+'""'+"\r\n"+
+	"	End If\r\n"+
+	"End Function\r\n"+
+	"</script>\r\n";
+document.write(IEBinaryToArray_ByteStr_Script);
 
+jarmon.GetIEByteArray_ByteStr = function(IEByteArray) {
+    if(typeof(jarmon.ByteMapping) == 'undefined') {
+        jarmon.ByteMapping = {};
+        for ( var i = 0; i < 256; i++ ) {
+	        for ( var j = 0; j < 256; j++ ) {
+		        jarmon.ByteMapping[ String.fromCharCode( i + j * 256 ) ] =
+			        String.fromCharCode(i) + String.fromCharCode(j);
+	            }
+        }
+    }
+
+	var rawBytes = IEBinaryToArray_ByteStr(IEByteArray);
+	var lastChr = IEBinaryToArray_ByteStr_Last(IEByteArray);
+	return rawBytes.replace(/[\s\S]/g,
+		function( match ) { return jarmon.ByteMapping[match]; }) + lastChr;
+};
 
 /*
  * BinaryFile over XMLHttpRequest
@@ -59,7 +95,8 @@ jarmon.InvalidBinaryFile.prototype.toString = function() {
 // BinaryFile class
 //   Allows access to element inside a binary stream
 jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
-	var data = strData;
+
+    var data = strData;
 	var dataOffset = iDataOffset || 0;
 	var dataLength = 0;
 	// added
@@ -67,26 +104,20 @@ jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
 	var doubleMantExpLo=Math.pow(2,-52);
 	var doubleMantExpFast=Math.pow(2,-20);
 
-	this.getRawData = function() {
-		return data;
-	};
-
 	if (typeof strData == "string") {
 		dataLength = iDataLength || data.length;
-
-		this.getByteAt = function(iOffset) {
-			return data.charCodeAt(iOffset + dataOffset) & 0xFF;
-		};
-	} else if (typeof strData == "unknown") {
-		dataLength = iDataLength || IEBinary_getLength(data);
-
-		this.getByteAt = function(iOffset) {
-			return IEBinary_getByteAt(data, iOffset + dataOffset);
-		};
 	} else {
 	  throw new jarmon.InvalidBinaryFile(
           "Unsupported type " + (typeof strData));
 	}
+    
+	this.getRawData = function() {
+		return data;
+	};
+
+	this.getByteAt = function(iOffset) {
+		return data.charCodeAt(iOffset + dataOffset) & 0xFF;
+	};
 
 	this.getLength = function() {
 		return dataLength;
@@ -194,23 +225,7 @@ jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
 	this.getCharAt = function(iOffset) {
 		return String.fromCharCode(this.getByteAt(iOffset));
 	};
-}
-
-
-document.write(
-	"<script type='text/vbscript'>\r\n"
-	+ "Function IEBinary_getByteAt(strBinary, iOffset)\r\n"
-	+ "	IEBinary_getByteAt = AscB(MidB(strBinary,iOffset+1,1))\r\n"
-	+ "End Function\r\n"
-	+ "Function IEBinary_getLength(strBinary)\r\n"
-	+ "	IEBinary_getLength = LenB(strBinary)\r\n"
-	+ "End Function\r\n"
-	+ "</script>\r\n"
-);
-
-
-
-
+};
 
 jarmon.downloadBinary = function(url) {
     /**
@@ -218,7 +233,8 @@ jarmon.downloadBinary = function(url) {
      *
      * @method downloadBinary
      * @param url {String} The url of the object to be downloaded
-     * @return {Object} A deferred which will callback with an instance of javascriptrrd.BinaryFile
+     * @return {Object} A deferred which will callback with an instance of
+     * javascriptrrd.BinaryFile
      */
 
     var d = new MochiKit.Async.Deferred();
@@ -235,7 +251,9 @@ jarmon.downloadBinary = function(url) {
         dataFilter: function(data, dataType) {
             // In IE we return the responseBody
             if(typeof(this._nativeXhr.responseBody) != 'undefined') {
-                return new jarmon.BinaryFile(this._nativeXhr.responseBody);
+                return new jarmon.BinaryFile(
+                        jarmon.GetIEByteArray_ByteStr(
+                            this._nativeXhr.responseBody));
             } else {
                 return new jarmon.BinaryFile(data);
             }
