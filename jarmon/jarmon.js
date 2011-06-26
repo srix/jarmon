@@ -75,7 +75,8 @@ jarmon.GetIEByteArray_ByteStr = function(IEByteArray) {
  *
  * Based on:
  *   Binary Ajax 0.1.5
- *   Copyright (c) 2008 Jacob Seidelin, cupboy@gmail.com, http://blog.nihilogic.dk/
+ * Copyright (c) 2008 Jacob Seidelin, cupboy@gmail.com,
+ *    http://blog.nihilogic.dk/
  *   MIT License [http://www.opensource.org/licenses/mit-license.php]
  */
 
@@ -1502,7 +1503,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
 
     // Populate a list of tzoffset options if the element is present in the
     // template as a select list
-    tzoffsetEl = this.ui.find('[name="tzoffset"]');
+    var tzoffsetEl = this.ui.find('[name="tzoffset"]');
     if(tzoffsetEl.is('select')) {
         var label, val;
         for(i=-12; i<=12; i++) {
@@ -1587,29 +1588,37 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 // XXX: is there a better way to check for valid date?
                 currentDate = new Date($(this).siblings(input_selector).val());
                 if(currentDate.getTime() != NaN) {
-                    $(this).data('dateinput')._input_selector = input_selector;
-                    $(this).data('dateinput')._initial_val = currentDate.getTime();
+                    $(this).data(
+                        'dateinput')._initial_val = currentDate.getTime();
                     $(this).data('dateinput').setValue(currentDate);
                     break;
                 }
             }
         })
-        .bind('onHide', function(e) {
-            // Called after a calendar date has been chosen by the user.
-
-            // Use the sibling selector that we generated above before opening
-            // the calendar
-            var input_selector = $(this).data('dateinput')._input_selector;
-            var oldStamp = $(this).data('dateinput')._initial_val;
-            var newDate = $(this).data('dateinput').getValue();
-            // Only update the form field if the date has changed.
-            if(oldStamp != newDate.getTime()) {
-                $(this).siblings(input_selector).val(
-                    newDate.toString().split(' ').slice(1,5).join(' '));
-                // Trigger a change event which should automatically update the
-                // graphs and change the timerange drop down selector to
-                // "custom"
-                $(this).siblings(input_selector).trigger('change');
+        .bind(
+            'onHide',
+            {self: this},
+            function(e) {
+                var self = e.data.self;
+                // Called after a calendar date has been chosen by the user.
+                // Use the sibling selector that we generated above
+                // before opening the calendar
+                var oldStamp = $(this).data('dateinput')._initial_val;
+                var newDate = $(this).data('dateinput').getValue();
+                // Only update the form field if the date has changed.
+                if(oldStamp != newDate.getTime()) {
+                    // Update the prepared time range select box to
+                    // value "custom"
+                    self.ui.find('[name="from_standard"]').val('custom');
+                    var from = null;
+                    var to = null;
+                    if($(this).hasClass('from_custom')){
+                        from = newDate.getTime();
+                    } else {
+                        to = newDate.getTime();
+                    }
+                    self.setTimeRange(from, to);
+                    self.update();
             }
         });
 
@@ -1655,7 +1664,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
     var now = new Date().getTime();
     for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
         if(jarmon.timeRangeShortcuts[i][0] == selection) {
-            range = jarmon.timeRangeShortcuts[i][1](now);
+            var range = jarmon.timeRangeShortcuts[i][1](now);
             this.setTimeRange(range[0], range[1]);
             break;
         }
