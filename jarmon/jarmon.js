@@ -237,8 +237,7 @@ jarmon.downloadBinary = function(url) {
      * @return {Object} A deferred which will callback with an instance of
      * javascriptrrd.BinaryFile
      */
-
-    var d = new MochiKit.Async.Deferred();
+    var d = jQuery.Deferred();
     $.ajax({
         url: url,
         dataType: 'text',
@@ -249,23 +248,23 @@ jarmon.downloadBinary = function(url) {
             this._nativeXhr = jQuery.ajaxSettings.xhr();
             return this._nativeXhr;
         },
+        complete: function(jqXHR, textStatus) {
+            this._nativeXhr = null;
+            delete this._nativeXhr;
+        },
         success: function(data, textStatus, jqXHR) {
             // In IE we return the responseBody
             if(typeof(this._nativeXhr.responseBody) != 'undefined') {
-                d.callback(
+                d.resolve(
                     new jarmon.BinaryFile(
                         jarmon.GetIEByteArray_ByteStr(
                             this._nativeXhr.responseBody)));
             } else {
-                d.callback(new jarmon.BinaryFile(data));
+                d.resolve(new jarmon.BinaryFile(data));
             }
         },
         error: function(xhr, textStatus, errorThrown) {
-            d.errback(new Error(xhr.status));
-        },
-        complete: function(jqXHR, textStatus) {
-            this._nativeXhr = null;
-            delete this._nativeXhr;
+            d.reject(new Error(xhr.status));
         }
     });
     return d;
@@ -490,40 +489,41 @@ jarmon.RrdQueryRemote = function(url, unit, downloader) {
 jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
     // Download the rrd if there has never been a download and don't start
     // another download if one is already in progress.
+    var self = this;
     if(!this._download) {
         this._download = this.downloader(this.url)
-                .addCallback(
-                    function(self, binary) {
+                .pipe(
+                    function(binary) {
                         // Upon successful download convert the resulting binary
                         // into an RRD file and pass it on to the next callback
                         // in the chain.
                         var rrd = new RRDFile(binary);
                         self.lastUpdate = rrd.getLastUpdate();
                         return rrd;
-                    }, this);
+                    });
     }
 
     // Set up a deferred which will call getData on the local RrdQuery object
     // returning a flot compatible data object to the caller.
-    var ret = new MochiKit.Async.Deferred().addCallback(
-        function(self, methodName, args, rrd) {
-            var rq = new jarmon.RrdQuery(rrd, self.unit);
-            return rq[methodName].apply(rq, args);
-        }, this, methodName, args);
+    var ret = jQuery.Deferred();
 
     // Add a pair of callbacks to the current download which will callback the
     // result which we setup above.
-    this._download.addBoth(
-        function(ret, res) {
+    this._download.always(
+        function(res) {
             if(res instanceof Error) {
-                ret.errback(res);
+                ret.reject(res);
             } else {
-                ret.callback(res);
+                ret.resolve(res);
             }
             return res;
-        }, ret);
+        });
 
-    return ret;
+    return ret.pipe(
+        function(rrd) {
+            var rq = new jarmon.RrdQuery(rrd, self.unit);
+            return rq[methodName].apply(rq, args);
+        });
 };
 
 
@@ -754,6 +754,7 @@ jarmon.Chart.prototype.draw = function() {
      * @return {Object} A Deferred which calls back with the chart data when
      *      the chart has been rendered.
      **/
+    var self = this;
     this.template.addClass('loading');
 
     var result;
@@ -766,8 +767,7 @@ jarmon.Chart.prototype.draw = function() {
             // empty dataset
             // 0 values so that it can contribute to a stacked chart.
             // 0 linewidth so that it doesn't cause a line in stacked chart
-            result = new MochiKit.Async.Deferred();
-            result.callback({
+            result = {
                 data: [
                     [this.startTime, 0],
                     [this.endTime, 0]
@@ -775,94 +775,100 @@ jarmon.Chart.prototype.draw = function() {
                 lines: {
                     lineWidth: 0
                 }
-            });
+            };
         }
 
         results.push(result);
     }
 
-    return MochiKit.Async.gatherResults(results)
-            .addCallback(
-                function(self, data) {
-                    // Clear any previous error messages.
-                    self.template.find('.error').empty().hide();
+    return jQuery.when.apply(null, results).pipe(
+        function() {
+            var data = Array.prototype.slice.call(arguments);
+            // Clear any previous error messages.
+            self.template.find('.error').empty().hide();
 
-                    var i, label, disabled = [];
-                    unit = '';
-                    for(i=0; i<data.length; i++) {
-                        label = self.data[i][0];
-                        if(label) {
-                            data[i].label = label;
-                        }
-                        if(typeof data[i].unit != 'undefined') {
-                            // Just use the last unit for now
-                            unit = data[i].unit;
-                        }
-                        if(!self.data[i][2]) {
-                            disabled.push(label);
-                        }
+            var i, label, disabled = [];
+            var unit = '';
+            for(i=0; i<data.length; i++) {
+                label = self.data[i][0];
+                if(label) {
+                    data[i].label = label;
+                }
+                if(typeof data[i].unit != 'undefined') {
+                    // Just use the last unit for now
+                    unit = data[i].unit;
+                }
+                if(!self.data[i][2]) {
+                    disabled.push(label);
+                }
+            }
+
+            $.plot(
+                self.template.find('.chart').empty().show(),
+                data, self.options);
+
+            var yaxisUnitLabel = $('<div>')
+                .text(self.siPrefix + unit)
+                .css({width: '100px',
+                      position: 'absolute',
+                      top: '80px',
+                      left: '-90px',
+                      'text-align': 'right'});
+            self.template.find('.chart').append(yaxisUnitLabel);
+
+            // Manipulate and move the flot generated legend to an
+            // alternative position.
+            // The default legend is formatted as an HTML table, so we
+            // grab the contents of the cells and turn them into
+            // divs.
+            // Actually, formatting the legend first as a one column
+            // table is useful as it generates an optimum label element
+            // width which we can copy to the new divs + a little extra
+            // to accomodate the color box
+            var legend = self.template.find('.graph-legend').show();
+            legend.empty();
+            self.template.find('.legendLabel').each(
+                function(i, el) {
+                    var orig = $(el);
+                    var label = orig.text();
+                    var newEl = $('<div />', {
+                        'class': 'legendItem',
+                        'title': 'Data series switch - click to turn this data series on or off'
+                    })
+                        .width(orig.width()+20)
+                        .text(label)
+                        .prepend(
+                            orig.prev()
+                                .find('div div')
+                                .clone().addClass('legendColorBox'))
+                        .appendTo(legend);
+                    // The legend label is clickable - to enable /
+                    // disable different data series. The disabled class
+                    // results in a label formatted with strike though
+                    if( $.inArray(label, disabled) > -1 ) {
+                        newEl.addClass('disabled');
                     }
+                }
+            ).remove();
+            legend.append($('<div />').css('clear', 'both'));
+            self.template.find('.legend').remove();
 
-                    $.plot(self.template.find('.chart').empty().show(), data, self.options);
+            yaxisUnitLabel.position(self.template.position());
+            return data;
+        }, null)
+        .fail(
+            function(failure) {
+                self.template.find('.chart').empty().hide();
+                self.template.find('.graph-legend').empty().hide();
+                self.template.find('.error').text(
+                    'error: ' + failure.message);
 
-                    var yaxisUnitLabel = $('<div>').text(self.siPrefix + unit)
-                                                   .css({width: '100px',
-                                                         position: 'absolute',
-                                                         top: '80px',
-                                                         left: '-90px',
-                                                         'text-align': 'right'});
-                    self.template.find('.chart').append(yaxisUnitLabel);
-
-                    // Manipulate and move the flot generated legend to an
-                    // alternative position.
-                    // The default legend is formatted as an HTML table, so we
-                    // grab the contents of the cells and turn them into
-                    // divs.
-                    // Actually, formatting the legend first as a one column
-                    // table is useful as it generates an optimum label element
-                    // width which we can copy to the new divs + a little extra
-                    // to accomodate the color box
-                    var legend = self.template.find('.graph-legend').show();
-                    legend.empty();
-                    self.template.find('.legendLabel').each(
-                        function(i, el) {
-                            var orig = $(el);
-                            var label = orig.text();
-                            var newEl = $('<div />', {
-                                'class': 'legendItem',
-                                'title': 'Data series switch - click to turn \
-                                          this data series on or off'
-                            })
-                                .width(orig.width()+20)
-                                .text(label)
-                                .prepend(orig.prev().find('div div').clone().addClass('legendColorBox'))
-                                .appendTo(legend);
-                            // The legend label is clickable - to enable /
-                            // disable different data series. The disabled class
-                            // results in a label formatted with strike though
-                            if( $.inArray(label, disabled) > -1 ) {
-                                newEl.addClass('disabled');
-                            }
-                        }
-                    ).remove();
-                    legend.append($('<div />').css('clear', 'both'));
-                    self.template.find('.legend').remove();
-
-                    yaxisUnitLabel.position(self.template.position());
-                    return data;
-                }, this)
-            .addErrback(
-                function(self, failure) {
-                    self.template.find('.chart').empty().hide();
-                    self.template.find('.graph-legend').empty().hide();
-                    self.template.find('.error').text('error: ' + failure.message);
-
-                }, this)
-            .addBoth(
-                function(self, res) {
-                    self.template.removeClass('loading');
-                    return res;
-                }, this);
+            })
+        .always(
+            function(res) {
+                self.template.removeClass('loading');
+                return res;
+            });
 };
 
 
@@ -1658,7 +1664,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
      *
      * @method update
      **/
-
+    var self = this;
     var selection = this.ui.find('[name="from_standard"]').val();
 
     var now = new Date().getTime();
@@ -1690,8 +1696,9 @@ jarmon.ChartCoordinator.prototype.update = function() {
                 this.charts[i].setTimeRange(startTime, endTime));
         }
     }
-    return MochiKit.Async.gatherResults(chartsLoading).addCallback(
-        function(self, startTime, endTime, chartData) {
+    return jQuery.when.apply(null, chartsLoading).done(
+        function() {
+            var chartData = Array.prototype.slice.call(arguments);
 
             var firstUpdate = new Date().getTime();
             var lastUpdate = 0;
@@ -1742,7 +1749,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
                                        self.rangePreviewOptions);
 
             self.rangePreview.setSelection(ranges, true);
-        }, this, startTime, endTime);
+        });
 };
 
 jarmon.ChartCoordinator.prototype.setTimeRange = function(from, to) {
@@ -1794,23 +1801,24 @@ jarmon.Parallimiter.prototype.addCallable = function(callable, args) {
     * @return {Object} A Deferred which fires with the result of the callable
     *       when it is called.
     **/
-    var d = new MochiKit.Async.Deferred();
+    var d = new jQuery.Deferred();
     this._callQueue.unshift([d, callable, args]);
     this._nextCall();
     return d;
 };
 
 jarmon.Parallimiter.prototype._nextCall = function() {
+    var self = this;
     if(this._callQueue.length > 0) {
         if(this._currentCallCount < this.limit) {
             this._currentCallCount++;
             var nextCall = this._callQueue.pop();
-            nextCall[1].apply(null, nextCall[2]).addBoth(
-                function(self, d, res) {
-                    d.callback(res);
+            nextCall[1].apply(null, nextCall[2]).always(
+                function(res) {
+                    nextCall[0].resolve(res);
                     self._currentCallCount--;
                     self._nextCall();
-                }, this, nextCall[0]);
+                });
         }
     }
 };
