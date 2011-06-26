@@ -27,6 +27,206 @@ if(typeof jarmon == 'undefined') {
     var jarmon = {};
 }
 
+// A VBScript and Javascript helper function to convert IE responseBody to a
+// byte string.
+// http://miskun.com/javascript/internet-explorer-and-binary-files-data-access/
+var IEBinaryToArray_ByteStr_Script =
+	"<!-- IEBinaryToArray_ByteStr -->\r\n"+
+	"<script type='text/vbscript'>\r\n"+
+	"Function IEBinaryToArray_ByteStr(Binary)\r\n"+
+	"	IEBinaryToArray_ByteStr = CStr(Binary)\r\n"+
+	"End Function\r\n"+
+	"Function IEBinaryToArray_ByteStr_Last(Binary)\r\n"+
+	"	Dim lastIndex\r\n"+
+	"	lastIndex = LenB(Binary)\r\n"+
+	"	if lastIndex mod 2 Then\r\n"+
+	"		IEBinaryToArray_ByteStr_Last = Chr( AscB( MidB( Binary, lastIndex, 1 ) ) )\r\n"+
+	"	Else\r\n"+
+	"		IEBinaryToArray_ByteStr_Last = "+'""'+"\r\n"+
+	"	End If\r\n"+
+	"End Function\r\n"+
+	"</script>\r\n";
+document.write(IEBinaryToArray_ByteStr_Script);
+
+jarmon.GetIEByteArray_ByteStr = function(IEByteArray) {
+    if(typeof(jarmon.ByteMapping) == 'undefined') {
+        jarmon.ByteMapping = {};
+        for ( var i = 0; i < 256; i++ ) {
+	        for ( var j = 0; j < 256; j++ ) {
+		        jarmon.ByteMapping[ String.fromCharCode( i + j * 256 ) ] =
+			        String.fromCharCode(i) + String.fromCharCode(j);
+	            }
+        }
+    }
+
+	var rawBytes = IEBinaryToArray_ByteStr(IEByteArray);
+	var lastChr = IEBinaryToArray_ByteStr_Last(IEByteArray);
+	return rawBytes.replace(/[\s\S]/g,
+		function( match ) { return jarmon.ByteMapping[match]; }) + lastChr;
+};
+
+/*
+ * BinaryFile over XMLHttpRequest
+ * Part of the javascriptRRD package
+ * Copyright (c) 2009 Frank Wuerthwein, fkw@ucsd.edu
+ * MIT License [http://www.opensource.org/licenses/mit-license.php]
+ *
+ * Original repository: http://javascriptrrd.sourceforge.net/
+ *
+ * Based on:
+ *   Binary Ajax 0.1.5
+ * Copyright (c) 2008 Jacob Seidelin, cupboy@gmail.com,
+ *    http://blog.nihilogic.dk/
+ *   MIT License [http://www.opensource.org/licenses/mit-license.php]
+ */
+
+// ============================================================
+// Exception class
+jarmon.InvalidBinaryFile = function(msg) {
+  this.message=msg;
+  this.name="Invalid BinaryFile";
+};
+
+// pretty print
+jarmon.InvalidBinaryFile.prototype.toString = function() {
+  return this.name + ': "' + this.message + '"';
+};
+
+// =====================================================================
+// BinaryFile class
+//   Allows access to element inside a binary stream
+jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
+
+    var data = strData;
+	var dataOffset = iDataOffset || 0;
+	var dataLength = 0;
+	// added
+	var doubleMantExpHi=Math.pow(2,-28);
+	var doubleMantExpLo=Math.pow(2,-52);
+	var doubleMantExpFast=Math.pow(2,-20);
+
+	if (typeof strData == "string") {
+		dataLength = iDataLength || data.length;
+	} else {
+	  throw new jarmon.InvalidBinaryFile(
+          "Unsupported type " + (typeof strData));
+	}
+
+	this.getRawData = function() {
+		return data;
+	};
+
+	this.getByteAt = function(iOffset) {
+		return data.charCodeAt(iOffset + dataOffset) & 0xFF;
+	};
+
+	this.getLength = function() {
+		return dataLength;
+	};
+
+	this.getSByteAt = function(iOffset) {
+		var iByte = this.getByteAt(iOffset);
+		if (iByte > 127)
+			return iByte - 256;
+		else
+			return iByte;
+	};
+
+	this.getShortAt = function(iOffset) {
+		var iShort = (
+            this.getByteAt(iOffset + 1) << 8) + this.getByteAt(iOffset);
+		if (iShort < 0) iShort += 65536;
+		return iShort;
+	};
+	this.getSShortAt = function(iOffset) {
+		var iUShort = this.getShortAt(iOffset);
+		if (iUShort > 32767)
+			return iUShort - 65536;
+		else
+			return iUShort;
+	};
+	this.getLongAt = function(iOffset) {
+		var iByte1 = this.getByteAt(iOffset),
+			iByte2 = this.getByteAt(iOffset + 1),
+			iByte3 = this.getByteAt(iOffset + 2),
+			iByte4 = this.getByteAt(iOffset + 3);
+
+		var iLong = (((((iByte4 << 8) + iByte3) << 8) + iByte2) << 8) + iByte1;
+		if (iLong < 0) iLong += 4294967296;
+		return iLong;
+	};
+	this.getSLongAt = function(iOffset) {
+		var iULong = this.getLongAt(iOffset);
+		if (iULong > 2147483647)
+			return iULong - 4294967296;
+		else
+			return iULong;
+	};
+	this.getStringAt = function(iOffset, iLength) {
+		var aStr = [];
+		for (var i=iOffset,j=0;i<iOffset+iLength;i++,j++) {
+			aStr[j] = String.fromCharCode(this.getByteAt(i));
+		}
+		return aStr.join("");
+	};
+
+	// Added
+	this.getCStringAt = function(iOffset, iMaxLength) {
+		var aStr = [];
+		for (var i=iOffset,j=0;(i<iOffset+iMaxLength) &&
+             (this.getByteAt(i)>0);i++,j++) {
+			aStr[j] = String.fromCharCode(this.getByteAt(i));
+		}
+		return aStr.join("");
+	};
+
+	// Added
+	this.getDoubleAt = function(iOffset) {
+		var iByte1 = this.getByteAt(iOffset),
+			iByte2 = this.getByteAt(iOffset + 1),
+			iByte3 = this.getByteAt(iOffset + 2),
+		        iByte4 = this.getByteAt(iOffset + 3),
+		        iByte5 = this.getByteAt(iOffset + 4),
+			iByte6 = this.getByteAt(iOffset + 5),
+			iByte7 = this.getByteAt(iOffset + 6),
+			iByte8 = this.getByteAt(iOffset + 7);
+		var iSign=iByte8 >> 7;
+		var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
+		var iMantHi=((((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5) << 8) + iByte4;
+		var iMantLo=((((iByte3) << 8) + iByte2) << 8) + iByte1;
+
+		if (iExpRaw==0) return 0.0;
+		if (iExpRaw==0x7ff) return undefined;
+
+		var iExp=(iExpRaw & 0x7FF)-1023;
+
+		var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
+		return dDouble;
+	};
+	// added
+	// Extracts only 4 bytes out of 8, loosing in precision (20 bit mantissa)
+	this.getFastDoubleAt = function(iOffset) {
+		var iByte5 = this.getByteAt(iOffset + 4),
+			iByte6 = this.getByteAt(iOffset + 5),
+			iByte7 = this.getByteAt(iOffset + 6),
+			iByte8 = this.getByteAt(iOffset + 7);
+		var iSign=iByte8 >> 7;
+		var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
+		var iMant=((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5;
+
+		if (iExpRaw==0) return 0.0;
+		if (iExpRaw==0x7ff) return undefined;
+
+		var iExp=(iExpRaw & 0x7FF)-1023;
+
+		var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
+		return dDouble;
+	};
+
+	this.getCharAt = function(iOffset) {
+		return String.fromCharCode(this.getByteAt(iOffset));
+	};
+};
 
 jarmon.downloadBinary = function(url) {
     /**
@@ -34,39 +234,38 @@ jarmon.downloadBinary = function(url) {
      *
      * @method downloadBinary
      * @param url {String} The url of the object to be downloaded
-     * @return {Object} A deferred which will callback with an instance of javascriptrrd.BinaryFile
+     * @return {Object} A deferred which will callback with an instance of
+     * javascriptrrd.BinaryFile
      */
 
     var d = new MochiKit.Async.Deferred();
-
     $.ajax({
-        _deferredResult: d,
         url: url,
         dataType: 'text',
-        cache: false,
-        beforeSend: function(request) {
-            try {
-                request.overrideMimeType('text/plain; charset=x-user-defined');
-            } catch(e) {
-                // IE doesn't support overrideMimeType
-            }
+        mimeType: 'text/plain; charset=x-user-defined',
+        xhr: function() {
+            // Save a reference to the native xhr object - we need it later
+            // in IE to access the binary data from responseBody
+            this._nativeXhr = jQuery.ajaxSettings.xhr();
+            return this._nativeXhr;
         },
-        success: function(data) {
-            try {
-                this._deferredResult.callback(new BinaryFile(data));
-            } catch(e) {
-                this._deferredResult.errback(e);
+        success: function(data, textStatus, jqXHR) {
+            // In IE we return the responseBody
+            if(typeof(this._nativeXhr.responseBody) != 'undefined') {
+                d.callback(
+                    new jarmon.BinaryFile(
+                        jarmon.GetIEByteArray_ByteStr(
+                            this._nativeXhr.responseBody)));
+            } else {
+                d.callback(new jarmon.BinaryFile(data));
             }
         },
         error: function(xhr, textStatus, errorThrown) {
-            // Special case for IE which handles binary data slightly
-            // differently.
-            if(textStatus == 'parsererror') {
-                if (typeof xhr.responseBody != 'undefined') {
-                    return this.success(xhr.responseBody);
-                }
-            }
-            this._deferredResult.errback(new Error(xhr.status));
+            d.errback(new Error(xhr.status));
+        },
+        complete: function(jqXHR, textStatus) {
+            this._nativeXhr = null;
+            delete this._nativeXhr;
         }
     });
     return d;
@@ -240,10 +439,10 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
 
     var val;
     var timestamp = startRowTime;
-    for(var i=startRowIndex; i<endRowIndex; i++) {
-        val = rra.getEl(i, dsIndex)
+    for(i=startRowIndex; i<endRowIndex; i++) {
+        val = rra.getEl(i, dsIndex);
         flotData.push([timestamp*1000.0, val]);
-        timestamp += step
+        timestamp += step;
     }
 
     // Now get the date of the earliest record in entire rrd file, ie that of
@@ -429,7 +628,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
             2: 'M',
             3: 'G',
             4: 'T'
-        }
+        };
         var si = 0;
         while(true) {
             if( Math.pow(1000, si+1)*0.9 > axis.max ) {
@@ -446,7 +645,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
 
         var stepSize, decimalPlaces = 0;
         for(var i=0; i<stepSizes.length; i++) {
-            stepSize = stepSizes[i]
+            stepSize = stepSizes[i];
             if( realStep < stepSize ) {
                 if(stepSize < 10) {
                     decimalPlaces = 2;
@@ -460,7 +659,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
         }
 
         var tickMin = minVal - minVal % stepSize;
-        var tickMax = maxVal - maxVal % stepSize + stepSize
+        var tickMax = maxVal - maxVal % stepSize + stepSize;
 
         var ticks = [];
         for(var j=tickMin; j<=tickMax; j+=stepSize) {
@@ -543,7 +742,7 @@ jarmon.Chart.prototype.setTimeRange = function(startTime, endTime) {
     this.startTime = startTime;
     this.endTime = endTime;
     return this.draw();
-}
+};
 
 jarmon.Chart.prototype.draw = function() {
     /**
@@ -698,8 +897,8 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
                     value: this.data.rrdUrl
                 })
             ),
-            $('<input/>', {type: 'submit', value: 'download'}),
-            $('<div/>', {class: 'next'})
+            $('<input/>', {'type': 'submit', value: 'download'}),
+            $('<div/>', {'class': 'next'})
         )
     ).submit(
         function(e) {
@@ -738,7 +937,7 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
             return false;
         }
     ).appendTo(this.$tpl);
-}
+};
 
 jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
     var self = this;
@@ -772,7 +971,7 @@ jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
             }
         ),
         $('<input/>', {type: 'submit', value: 'save'}),
-        $('<div/>', {class: 'next'})
+        $('<div/>', {'class': 'next'})
     ).submit(
         function(e) {
             self.data.dsLabel = this['dsLabel'].value;
@@ -931,7 +1130,7 @@ jarmon.ChartEditor.prototype._extractRowValues = function($row) {
         function(i, el) {
             return el.value;
         }
-    )
+    );
 };
 
 
@@ -1044,7 +1243,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
                 'value': $originalLink.text(),
                 'name': 'editTabTitle',
                 'type': 'text'
-            })
+            });
             $originalLink.replaceWith($input);
             $input.focus();
         }
@@ -1060,7 +1259,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
                 $('<a/>', {
                     href: ['#', this.value].join('')
                 }).text(this.value)
-            )
+            );
             self.setup();
             self.$tabBar.data("tabs").click(this.value);
         }
@@ -1114,7 +1313,7 @@ jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
     /**
      * Setup chart date range controls and all charts
      **/
-    var p = new jarmon.Parallimiter(1);
+    var p = new jarmon.Parallimiter(2);
     function serialDownloader(url) {
         return p.addCallable(jarmon.downloadBinary, [url]);
     }
@@ -1304,10 +1503,10 @@ jarmon.ChartCoordinator = function(ui, charts) {
 
     // Populate a list of tzoffset options if the element is present in the
     // template as a select list
-    tzoffsetEl = this.ui.find('[name="tzoffset"]');
+    var tzoffsetEl = this.ui.find('[name="tzoffset"]');
     if(tzoffsetEl.is('select')) {
         var label, val;
-        for(var i=-12; i<=12; i++) {
+        for(i=-12; i<=12; i++) {
             label = 'UTC';
             val = i;
             if(val >= 0) {
@@ -1389,29 +1588,37 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 // XXX: is there a better way to check for valid date?
                 currentDate = new Date($(this).siblings(input_selector).val());
                 if(currentDate.getTime() != NaN) {
-                    $(this).data('dateinput')._input_selector = input_selector;
-                    $(this).data('dateinput')._initial_val = currentDate.getTime();
+                    $(this).data(
+                        'dateinput')._initial_val = currentDate.getTime();
                     $(this).data('dateinput').setValue(currentDate);
                     break;
                 }
             }
         })
-        .bind('onHide', function(e) {
-            // Called after a calendar date has been chosen by the user.
-
-            // Use the sibling selector that we generated above before opening
-            // the calendar
-            var input_selector = $(this).data('dateinput')._input_selector;
-            var oldStamp = $(this).data('dateinput')._initial_val;
-            var newDate = $(this).data('dateinput').getValue();
-            // Only update the form field if the date has changed.
-            if(oldStamp != newDate.getTime()) {
-                $(this).siblings(input_selector).val(
-                    newDate.toString().split(' ').slice(1,5).join(' '));
-                // Trigger a change event which should automatically update the
-                // graphs and change the timerange drop down selector to
-                // "custom"
-                $(this).siblings(input_selector).trigger('change');
+        .bind(
+            'onHide',
+            {self: this},
+            function(e) {
+                var self = e.data.self;
+                // Called after a calendar date has been chosen by the user.
+                // Use the sibling selector that we generated above
+                // before opening the calendar
+                var oldStamp = $(this).data('dateinput')._initial_val;
+                var newDate = $(this).data('dateinput').getValue();
+                // Only update the form field if the date has changed.
+                if(oldStamp != newDate.getTime()) {
+                    // Update the prepared time range select box to
+                    // value "custom"
+                    self.ui.find('[name="from_standard"]').val('custom');
+                    var from = null;
+                    var to = null;
+                    if($(this).hasClass('from_custom')){
+                        from = newDate.getTime();
+                    } else {
+                        to = newDate.getTime();
+                    }
+                    self.setTimeRange(from, to);
+                    self.update();
             }
         });
 
@@ -1457,7 +1664,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
     var now = new Date().getTime();
     for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
         if(jarmon.timeRangeShortcuts[i][0] == selection) {
-            range = jarmon.timeRangeShortcuts[i][1](now);
+            var range = jarmon.timeRangeShortcuts[i][1](now);
             this.setTimeRange(range[0], range[1]);
             break;
         }
@@ -1475,7 +1682,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
     this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
 
     var chartsLoading = [];
-    for(var i=0; i<this.charts.length; i++){
+    for(i=0; i<this.charts.length; i++){
         this.charts[i].options.xaxis.tzoffset = tzoffset;
         // Don't render charts which are not currently visible
         if(this.charts[i].template.is(':visible')) {
@@ -1519,7 +1726,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
                            MONTH, MONTH*3, MONTH*6, YEAR];
 
             var range = ranges.xaxis.to - ranges.xaxis.from;
-            for(var i=0; i<periods.length; i++) {
+            for(i=0; i<periods.length; i++) {
                 if(range <= periods[i]) {
                     i++;
                     break;

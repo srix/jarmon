@@ -8,7 +8,10 @@ import logging
 import os
 import shutil
 import sys
+import httplib
+import urllib
 
+from datetime import datetime
 from optparse import OptionParser
 from subprocess import check_call, PIPE
 from tempfile import gettempdir
@@ -21,7 +24,7 @@ import pkg_resources
 JARMON_PROJECT_TITLE = 'Jarmon'
 JARMON_PROJECT_URL = 'http://www.launchpad.net/jarmon'
 
-YUIDOC_URL = 'http://yuilibrary.com/downloads/yuidoc/yuidoc_1.0.0b1.zip'
+YUIDOC_URL = 'http://yui.zenfs.com/releases/yuidoc/yuidoc_1.0.0b1.zip'
 YUIDOC_MD5 = 'cd5545d2dec8f7afe3d18e793538162c'
 YUIDOC_DEPENDENCIES = ['setuptools', 'pygments', 'cheetah']
 
@@ -228,7 +231,6 @@ class BuildTestDataCommand(BuildCommand):
         Create an RRD file with values 0-9 entered at 1 second intervals from
         1980-01-01 00:00:00 (the first date that rrdtool allows)
         """
-        from datetime import datetime
         from pyrrd.rrd import DataSource, RRA, RRD
         start = int(datetime(1980, 1, 1, 0, 0).strftime('%s'))
         dss = []
@@ -261,11 +263,53 @@ class BuildTestDataCommand(BuildCommand):
         my_rrd.update()
 
 
+class BuildJavascriptDependenciesCommand(BuildCommand):
+    """
+    Export all source files, generate apidocs and create a zip archive for
+    upload to Launchpad.
+    """
+
+    command_name = 'jsdeps'
+
+    def main(self, argv):
+        self.log.debug('Compiling javascript dependencies')
+
+        depjs_path = os.path.join(
+            self.workingbranch_dir,
+            'docs/examples/assets/js/dependencies.js')
+
+        # Get the closure params from the original file
+        params = []
+        for line in  open(depjs_path):
+            line = line.strip()
+            if line.startswith('// @'):
+                key, val = line.lstrip('/ @').strip().split(None, 1)
+                params.append((key.strip(), val.strip()))
+
+        # Always use the following value for the Content-type header.
+        headers = { "Content-type": "application/x-www-form-urlencoded" }
+        conn = httplib.HTTPConnection('closure-compiler.appspot.com')
+        conn.request('POST', '/compile', urllib.urlencode(params), headers)
+        response = conn.getresponse()
+        with open(depjs_path, 'w') as f:
+            f.write(
+                '// Compiled with closure-compiler on %s\n' % (datetime.now()))
+            for param in params:
+                f.write('// @%s %s\n' % param)
+
+            while not response.isclosed():
+                f.write(response.read(1024 * 10))
+
+        conn.close
+
+
+
 # The available subcommands
 SUBCOMMAND_HANDLERS = [
     BuildApidocsCommand,
     BuildReleaseCommand,
     BuildTestDataCommand,
+    BuildJavascriptDependenciesCommand,
 ]
 
 

@@ -34,7 +34,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
             d.addBoth(
                 function(self, ret) {
                     self.resume(function() {
-                        Y.Assert.isInstanceOf(BinaryFile, ret);
+                        Y.Assert.isInstanceOf(jarmon.BinaryFile, ret);
                         Y.Assert.areEqual(String.fromCharCode(0), ret.getRawData());
                     });
                 }, this);
