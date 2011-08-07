@@ -263,7 +263,7 @@ jarmon.downloadBinary = function(url) {
             }
         },
         error: function(xhr, textStatus, errorThrown) {
-            d.reject(new Error(xhr.status));
+            d.reject(new Error(textStatus + ':' + xhr.status));
         }
     });
     return d;

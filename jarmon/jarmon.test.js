@@ -19,7 +19,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                 function(ret) {
                     self.resume(function() {
                         Y.Assert.isInstanceOf(Error, ret);
-                        Y.Assert.areEqual(404, ret.message);
+                        Y.Assert.areEqual('error:404', ret.message);
                     });
                 });
 
@@ -38,7 +38,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     self.resume(function() {
                         Y.Assert.isInstanceOf(jarmon.BinaryFile, ret);
                         Y.Assert.areEqual(
-                            String.fromCharCode(0), ret.getRawData());
+                            String.fromCharCode(0), ret.getCharAt(0));
                     });
                 });
 
