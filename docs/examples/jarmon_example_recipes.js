@@ -1,4 +1,4 @@
-/* Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+/* Copyright (c) Richard Wall
  * See LICENSE for details.
  *
  * Some example recipes for Collectd RRD data - you *will* need to modify this

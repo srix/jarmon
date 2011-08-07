@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+ * Copyright (c) Richard Wall
  * See LICENSE for details.
  *
  * Wrappers and convenience fuctions for working with the javascriptRRD, jQuery,
