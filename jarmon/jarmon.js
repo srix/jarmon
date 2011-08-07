@@ -31,38 +31,38 @@ if(typeof jarmon == 'undefined') {
 // byte string.
 // http://miskun.com/javascript/internet-explorer-and-binary-files-data-access/
 var IEBinaryToArray_ByteStr_Script =
-	"<!-- IEBinaryToArray_ByteStr -->\r\n"+
-	"<script type='text/vbscript'>\r\n"+
-	"Function IEBinaryToArray_ByteStr(Binary)\r\n"+
-	"	IEBinaryToArray_ByteStr = CStr(Binary)\r\n"+
-	"End Function\r\n"+
-	"Function IEBinaryToArray_ByteStr_Last(Binary)\r\n"+
-	"	Dim lastIndex\r\n"+
-	"	lastIndex = LenB(Binary)\r\n"+
-	"	if lastIndex mod 2 Then\r\n"+
-	"		IEBinaryToArray_ByteStr_Last = Chr( AscB( MidB( Binary, lastIndex, 1 ) ) )\r\n"+
-	"	Else\r\n"+
-	"		IEBinaryToArray_ByteStr_Last = "+'""'+"\r\n"+
-	"	End If\r\n"+
-	"End Function\r\n"+
-	"</script>\r\n";
+    "<!-- IEBinaryToArray_ByteStr -->\r\n"+
+    "<script type='text/vbscript'>\r\n"+
+    "Function IEBinaryToArray_ByteStr(Binary)\r\n"+
+    "	IEBinaryToArray_ByteStr = CStr(Binary)\r\n"+
+    "End Function\r\n"+
+    "Function IEBinaryToArray_ByteStr_Last(Binary)\r\n"+
+    "	Dim lastIndex\r\n"+
+    "	lastIndex = LenB(Binary)\r\n"+
+    "	if lastIndex mod 2 Then\r\n"+
+    "		IEBinaryToArray_ByteStr_Last = Chr( AscB( MidB( Binary, lastIndex, 1 ) ) )\r\n"+
+    "	Else\r\n"+
+    "		IEBinaryToArray_ByteStr_Last = "+'""'+"\r\n"+
+    "	End If\r\n"+
+    "End Function\r\n"+
+    "</script>\r\n";
 document.write(IEBinaryToArray_ByteStr_Script);
 
 jarmon.GetIEByteArray_ByteStr = function(IEByteArray) {
     if(typeof(jarmon.ByteMapping) == 'undefined') {
         jarmon.ByteMapping = {};
         for ( var i = 0; i < 256; i++ ) {
-	        for ( var j = 0; j < 256; j++ ) {
-		        jarmon.ByteMapping[ String.fromCharCode( i + j * 256 ) ] =
-			        String.fromCharCode(i) + String.fromCharCode(j);
-	            }
+            for ( var j = 0; j < 256; j++ ) {
+                jarmon.ByteMapping[ String.fromCharCode( i + j * 256 ) ] =
+                    String.fromCharCode(i) + String.fromCharCode(j);
+                }
         }
     }
 
-	var rawBytes = IEBinaryToArray_ByteStr(IEByteArray);
-	var lastChr = IEBinaryToArray_ByteStr_Last(IEByteArray);
-	return rawBytes.replace(/[\s\S]/g,
-		function( match ) { return jarmon.ByteMapping[match]; }) + lastChr;
+    var rawBytes = IEBinaryToArray_ByteStr(IEByteArray);
+    var lastChr = IEBinaryToArray_ByteStr_Last(IEByteArray);
+    return rawBytes.replace(/[\s\S]/g,
+        function( match ) { return jarmon.ByteMapping[match]; }) + lastChr;
 };
 
 /*
@@ -98,134 +98,134 @@ jarmon.InvalidBinaryFile.prototype.toString = function() {
 jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
 
     var data = strData;
-	var dataOffset = iDataOffset || 0;
-	var dataLength = 0;
-	// added
-	var doubleMantExpHi=Math.pow(2,-28);
-	var doubleMantExpLo=Math.pow(2,-52);
-	var doubleMantExpFast=Math.pow(2,-20);
+    var dataOffset = iDataOffset || 0;
+    var dataLength = 0;
+    // added
+    var doubleMantExpHi=Math.pow(2,-28);
+    var doubleMantExpLo=Math.pow(2,-52);
+    var doubleMantExpFast=Math.pow(2,-20);
 
-	if (typeof strData == "string") {
-		dataLength = iDataLength || data.length;
-	} else {
-	  throw new jarmon.InvalidBinaryFile(
+    if (typeof strData == "string") {
+        dataLength = iDataLength || data.length;
+    } else {
+      throw new jarmon.InvalidBinaryFile(
           "Unsupported type " + (typeof strData));
-	}
+    }
 
-	this.getRawData = function() {
-		return data;
-	};
+    this.getRawData = function() {
+        return data;
+    };
 
-	this.getByteAt = function(iOffset) {
-		return data.charCodeAt(iOffset + dataOffset) & 0xFF;
-	};
+    this.getByteAt = function(iOffset) {
+        return data.charCodeAt(iOffset + dataOffset) & 0xFF;
+    };
 
-	this.getLength = function() {
-		return dataLength;
-	};
+    this.getLength = function() {
+        return dataLength;
+    };
 
-	this.getSByteAt = function(iOffset) {
-		var iByte = this.getByteAt(iOffset);
-		if (iByte > 127)
-			return iByte - 256;
-		else
-			return iByte;
-	};
+    this.getSByteAt = function(iOffset) {
+        var iByte = this.getByteAt(iOffset);
+        if (iByte > 127)
+            return iByte - 256;
+        else
+            return iByte;
+    };
 
-	this.getShortAt = function(iOffset) {
-		var iShort = (
+    this.getShortAt = function(iOffset) {
+        var iShort = (
             this.getByteAt(iOffset + 1) << 8) + this.getByteAt(iOffset);
-		if (iShort < 0) iShort += 65536;
-		return iShort;
-	};
-	this.getSShortAt = function(iOffset) {
-		var iUShort = this.getShortAt(iOffset);
-		if (iUShort > 32767)
-			return iUShort - 65536;
-		else
-			return iUShort;
-	};
-	this.getLongAt = function(iOffset) {
-		var iByte1 = this.getByteAt(iOffset),
-			iByte2 = this.getByteAt(iOffset + 1),
-			iByte3 = this.getByteAt(iOffset + 2),
-			iByte4 = this.getByteAt(iOffset + 3);
+        if (iShort < 0) iShort += 65536;
+        return iShort;
+    };
+    this.getSShortAt = function(iOffset) {
+        var iUShort = this.getShortAt(iOffset);
+        if (iUShort > 32767)
+            return iUShort - 65536;
+        else
+            return iUShort;
+    };
+    this.getLongAt = function(iOffset) {
+        var iByte1 = this.getByteAt(iOffset),
+            iByte2 = this.getByteAt(iOffset + 1),
+            iByte3 = this.getByteAt(iOffset + 2),
+            iByte4 = this.getByteAt(iOffset + 3);
 
-		var iLong = (((((iByte4 << 8) + iByte3) << 8) + iByte2) << 8) + iByte1;
-		if (iLong < 0) iLong += 4294967296;
-		return iLong;
-	};
-	this.getSLongAt = function(iOffset) {
-		var iULong = this.getLongAt(iOffset);
-		if (iULong > 2147483647)
-			return iULong - 4294967296;
-		else
-			return iULong;
-	};
-	this.getStringAt = function(iOffset, iLength) {
-		var aStr = [];
-		for (var i=iOffset,j=0;i<iOffset+iLength;i++,j++) {
-			aStr[j] = String.fromCharCode(this.getByteAt(i));
-		}
-		return aStr.join("");
-	};
+        var iLong = (((((iByte4 << 8) + iByte3) << 8) + iByte2) << 8) + iByte1;
+        if (iLong < 0) iLong += 4294967296;
+        return iLong;
+    };
+    this.getSLongAt = function(iOffset) {
+        var iULong = this.getLongAt(iOffset);
+        if (iULong > 2147483647)
+            return iULong - 4294967296;
+        else
+            return iULong;
+    };
+    this.getStringAt = function(iOffset, iLength) {
+        var aStr = [];
+        for (var i=iOffset,j=0;i<iOffset+iLength;i++,j++) {
+            aStr[j] = String.fromCharCode(this.getByteAt(i));
+        }
+        return aStr.join("");
+    };
 
-	// Added
-	this.getCStringAt = function(iOffset, iMaxLength) {
-		var aStr = [];
-		for (var i=iOffset,j=0;(i<iOffset+iMaxLength) &&
+    // Added
+    this.getCStringAt = function(iOffset, iMaxLength) {
+        var aStr = [];
+        for (var i=iOffset,j=0;(i<iOffset+iMaxLength) &&
              (this.getByteAt(i)>0);i++,j++) {
-			aStr[j] = String.fromCharCode(this.getByteAt(i));
-		}
-		return aStr.join("");
-	};
+            aStr[j] = String.fromCharCode(this.getByteAt(i));
+        }
+        return aStr.join("");
+    };
 
-	// Added
-	this.getDoubleAt = function(iOffset) {
-		var iByte1 = this.getByteAt(iOffset),
-			iByte2 = this.getByteAt(iOffset + 1),
-			iByte3 = this.getByteAt(iOffset + 2),
-		        iByte4 = this.getByteAt(iOffset + 3),
-		        iByte5 = this.getByteAt(iOffset + 4),
-			iByte6 = this.getByteAt(iOffset + 5),
-			iByte7 = this.getByteAt(iOffset + 6),
-			iByte8 = this.getByteAt(iOffset + 7);
-		var iSign=iByte8 >> 7;
-		var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
-		var iMantHi=((((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5) << 8) + iByte4;
-		var iMantLo=((((iByte3) << 8) + iByte2) << 8) + iByte1;
+    // Added
+    this.getDoubleAt = function(iOffset) {
+        var iByte1 = this.getByteAt(iOffset),
+            iByte2 = this.getByteAt(iOffset + 1),
+            iByte3 = this.getByteAt(iOffset + 2),
+                iByte4 = this.getByteAt(iOffset + 3),
+                iByte5 = this.getByteAt(iOffset + 4),
+            iByte6 = this.getByteAt(iOffset + 5),
+            iByte7 = this.getByteAt(iOffset + 6),
+            iByte8 = this.getByteAt(iOffset + 7);
+        var iSign=iByte8 >> 7;
+        var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
+        var iMantHi=((((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5) << 8) + iByte4;
+        var iMantLo=((((iByte3) << 8) + iByte2) << 8) + iByte1;
 
-		if (iExpRaw==0) return 0.0;
-		if (iExpRaw==0x7ff) return undefined;
+        if (iExpRaw==0) return 0.0;
+        if (iExpRaw==0x7ff) return undefined;
 
-		var iExp=(iExpRaw & 0x7FF)-1023;
+        var iExp=(iExpRaw & 0x7FF)-1023;
 
-		var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
-		return dDouble;
-	};
-	// added
-	// Extracts only 4 bytes out of 8, loosing in precision (20 bit mantissa)
-	this.getFastDoubleAt = function(iOffset) {
-		var iByte5 = this.getByteAt(iOffset + 4),
-			iByte6 = this.getByteAt(iOffset + 5),
-			iByte7 = this.getByteAt(iOffset + 6),
-			iByte8 = this.getByteAt(iOffset + 7);
-		var iSign=iByte8 >> 7;
-		var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
-		var iMant=((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5;
+        var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
+        return dDouble;
+    };
+    // added
+    // Extracts only 4 bytes out of 8, loosing in precision (20 bit mantissa)
+    this.getFastDoubleAt = function(iOffset) {
+        var iByte5 = this.getByteAt(iOffset + 4),
+            iByte6 = this.getByteAt(iOffset + 5),
+            iByte7 = this.getByteAt(iOffset + 6),
+            iByte8 = this.getByteAt(iOffset + 7);
+        var iSign=iByte8 >> 7;
+        var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
+        var iMant=((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5;
 
-		if (iExpRaw==0) return 0.0;
-		if (iExpRaw==0x7ff) return undefined;
+        if (iExpRaw==0) return 0.0;
+        if (iExpRaw==0x7ff) return undefined;
 
-		var iExp=(iExpRaw & 0x7FF)-1023;
+        var iExp=(iExpRaw & 0x7FF)-1023;
 
-		var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
-		return dDouble;
-	};
+        var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
+        return dDouble;
+    };
 
-	this.getCharAt = function(iOffset) {
-		return String.fromCharCode(this.getByteAt(iOffset));
-	};
+    this.getCharAt = function(iOffset) {
+        return String.fromCharCode(this.getByteAt(iOffset));
+    };
 };
 
 jarmon.downloadBinary = function(url) {
