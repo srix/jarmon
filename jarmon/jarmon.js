@@ -495,16 +495,7 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
     // another download if one is already in progress.
     var self = this;
     if(!this._download) {
-        this._download = this.downloader(this.url)
-                .pipe(
-                    function(binary) {
-                        // Upon successful download convert the resulting binary
-                        // into an RRD file and pass it on to the next callback
-                        // in the chain.
-                        var rrd = new RRDFile(binary);
-                        self.lastUpdate = rrd.getLastUpdate();
-                        return rrd;
-                    });
+        this._download = this.downloader(this.url);
     }
 
     // Set up a deferred which will call getData on the local RrdQuery object
@@ -518,7 +509,12 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
             if(res instanceof Error) {
                 ret.reject(res);
             } else {
-                var rq = new jarmon.RrdQuery(res, self.unit);
+                // Upon successful download convert the resulting binary
+                // into an RRD file
+                var rrd = new RRDFile(res);
+                self.lastUpdate = rrd.getLastUpdate();
+
+                var rq = new jarmon.RrdQuery(rrd, self.unit);
                 try {
                     ret.resolve(rq[methodName].apply(rq, args));
                 } catch(e) {
