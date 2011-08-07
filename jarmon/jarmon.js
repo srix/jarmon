@@ -1178,16 +1178,6 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     this.placeholders = [];
 
     this.$tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
-
-    // Icon and hidden input box for adding new tabs. See event handlers below.
-    this.$newTabControls = $('<li/>', {
-        'class': 'newTabControls',
-        'title': 'Add new tab'
-    }).append(
-        $('<img/>', {src: 'assets/icons/next.gif'}),
-        $('<input/>', {'type': 'text'}).hide()
-    ).appendTo(this.$tabBar);
-
     this.$tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
     var tabName, $tabPanel, placeNames;
     for(var i=0; i<recipe.length; i++) {
@@ -1203,88 +1193,6 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     }
 
     this.setup();
-
-    // Show the new tab name input box when the user clicks the new tab icon
-    $('ul.css-tabs > li.newTabControls > img', $tpl[0]).live(
-        'click',
-        function(e) {
-            $(this).hide().siblings().show().focus();
-        }
-    );
-
-    // When the "new" tab input loses focus, use its value to create a new
-    // tab.
-    // XXX: Due to event bubbling, this event seems to be triggered twice, but
-    // only when the input is forcefully blurred by the "keypress" event handler
-    // below. To prevent two tabs, we blank the input field value. Tried
-    // preventing event bubbling, but there seems to be some subtle difference
-    // with the use of jquery live event handlers.
-    $('ul.css-tabs > li.newTabControls > input', $tpl[0]).live(
-        'blur',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            var value = this.value;
-            this.value = '';
-            $(this).hide().siblings().show();
-            if(value) {
-                self.newTab(value);
-                self.setup();
-                self.$tabBar.data("tabs").click(value);
-            }
-        }
-    );
-
-    // Unfocus the input element when return key is pressed. Triggers a
-    // blur event which then replaces the input with a tab
-    $('ul.css-tabs > li > input', $tpl[0]).live(
-        'keypress',
-        function(e) {
-            if(e.which === 13) {
-                $(this).blur();
-            }
-        }
-    );
-
-    // Show tab name input box when tab is double clicked.
-    $('ul.css-tabs > li > a', $tpl[0]).live(
-        'dblclick',
-        {self: this},
-        function(e) {
-            var $originalLink = $(this);
-            var $input = $('<input/>', {
-                'value': $originalLink.text(),
-                'name': 'editTabTitle',
-                'type': 'text'
-            });
-            $originalLink.replaceWith($input);
-            $input.focus();
-        }
-    );
-
-    // Handle the updating of the tab when its name is edited.
-    $('ul.css-tabs > li > input[name=editTabTitle]', $tpl[0]).live(
-        'blur',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            $(this).replaceWith(
-                $('<a/>', {
-                    href: ['#', this.value].join('')
-                }).text(this.value)
-            );
-            self.setup();
-            self.$tabBar.data("tabs").click(this.value);
-        }
-    );
-
-    $('input[name=add_new_chart]', $tpl[0]).live(
-        'click',
-        {self: this},
-        function(e) {
-            console.log(e);
-        }
-    );
 };
 
 jarmon.TabbedInterface.prototype.newTab = function(tabName) {
@@ -1294,29 +1202,18 @@ jarmon.TabbedInterface.prototype.newTab = function(tabName) {
     ).appendTo(this.$tabBar);
     var $placeholder = $('<div/>');
     // Add tab panel
-    $('<div/>').append(
-        $placeholder,
-        $('<div/>', {'class': 'tab-controls'}).append(
-            $('<input/>', {
-                type: 'button',
-                value: 'Add new chart',
-                name: 'add_new_chart'
-            })
-        )
-    ).appendTo(this.$tabPanels);
+    $('<div/>').append($placeholder).appendTo(this.$tabPanels);
 
     return $placeholder;
 };
 
 jarmon.TabbedInterface.prototype.setup = function() {
-    this.$newTabControls.remove();
     // Destroy then re-initialise the jquerytools tabs plugin
     var api = this.$tabBar.data("tabs");
     if(api) {
         api.destroy();
     }
     this.$tabBar.tabs(this.$tabPanels.children('div'));
-    this.$newTabControls.appendTo(this.$tabBar);
 };
 
 
