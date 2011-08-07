@@ -813,10 +813,10 @@ jarmon.Chart.prototype.draw = function() {
 
             var yaxisUnitLabel = $('<div>')
                 .text(self.siPrefix + unit)
-                .css({width: '100px',
-                      position: 'absolute',
-                      top: '80px',
-                      left: '-90px',
+                .css({'width': '100px',
+                      'position': 'absolute',
+                      'top': '80px',
+                      'left': '-120px',
                       'text-align': 'right'});
             self.template.find('.chart').append(yaxisUnitLabel);
 
