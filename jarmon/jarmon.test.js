@@ -35,7 +35,8 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                 function(self, ret) {
                     self.resume(function() {
                         Y.Assert.isInstanceOf(jarmon.BinaryFile, ret);
-                        Y.Assert.areEqual(String.fromCharCode(0), ret.getRawData());
+                        Y.Assert.areEqual(
+                            String.fromCharCode(0), ret.getRawData());
                     });
                 }, this);
 
@@ -136,7 +137,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                         for(var i=0; i<RRD_RRAROWS; i++) {
                             Y.Assert.areEqual(i, rra.getEl(i, RRD_DSINDEX));
                         }
-                        var error = null
+                        var error = null;
                         try {
                             rra.getEl(RRD_RRAROWS+1, 0);
                         } catch(e) {
@@ -219,11 +220,12 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     self.resume(function() {
                         var rq = new jarmon.RrdQuery(rrd, '');
 
-                        // We request data starting 1 STEP +1s after the RRD file
-                        // first val and ending 1 STEP -1s before the RRD last val
-                        // ie one step within the RRD file, but 1s away from the
-                        // step boundary to test the quantisation of the
-                        // requested time range.
+                        /* We request data starting 1 STEP +1s after
+                        the RRD file first val and ending 1 STEP -1s
+                        before the RRD last val ie one step within the
+                        RRD file, but 1s away from the step boundary
+                        to test the quantisation of the requested time
+                        range.*/
                         var data = rq.getData(
                             RRD_STARTTIME + (RRD_STEP+1) * 1000,
                             RRD_ENDTIME - (RRD_STEP-1) * 1000);
@@ -323,14 +325,14 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                             RRD_ENDTIME - (RRD_STEP-1) * 1000).addBoth(
                 function(self, data) {
                     self.resume(function() {
-                        // We request data starting 1 STEP +1s after the RRD file
-                        // first val and ending 1 STEP -1s before the RRD last val
-                        // ie one step within the RRD file, but 1s away from the
-                        // step boundary to test the quantisation of the
-                        // requested time range.
-
-                        // so we expect two less rows than the total rows in the
-                        // file.
+                        /* We request data starting 1 STEP +1s after
+                         the RRD file first val and ending 1 STEP -1s
+                         before the RRD last val ie one step within
+                         the RRD file, but 1s away from the step
+                         boundary to test the quantisation of the
+                         requested time range.
+                         so we expect two less rows than the total
+                         rows in the file. */
                         Y.Assert.areEqual(RRD_RRAROWS-2, data.data.length);
 
                         // The value of the first returned row should be the
@@ -383,11 +385,15 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
              * Test that a rendered chart has the correct dimensions, legend,
              * axis, labels etc
              **/
-            var $tpl = $('<div><div class="chart"></div></div>').appendTo($('body'));
+            var $tpl = $(
+                '<div><div class="chart"></div></div>').appendTo($('body'));
             var c = new jarmon.Chart($tpl, jarmon.Chart.BASE_OPTIONS);
             //
             c.options.xaxis.tzoffset = 0;
-            c.addData('speed', new jarmon.RrdQueryRemote('build/test.rrd', 'm/s'), true);
+            c.addData(
+                'speed',
+                new jarmon.RrdQueryRemote('build/test.rrd', 'm/s'),
+                true);
             var d = c.setTimeRange(RRD_STARTTIME, RRD_ENDTIME);
             d.addCallback(
                 function(self) {
@@ -396,7 +402,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     });
                 }, this);
             this.wait();
-        },
+        }
     }));
 
 
@@ -404,7 +410,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         name: "jarmon.RrdChooser",
 
         setUp: function() {
-            this.$tpl = $('<div/>').appendTo($('body'))
+            this.$tpl = $('<div/>').appendTo($('body'));
             var c = new jarmon.RrdChooser(this.$tpl);
             c.drawRrdUrlForm();
         },
@@ -437,13 +443,15 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
              * list of further DS  label fields
              **/
             var self = this;
-            this.$tpl.find('form input[name=rrd_url]').val('build/test.rrd').submit();
+            this.$tpl.find(
+                'form input[name=rrd_url]').val('build/test.rrd').submit();
             this.wait(
                 function() {
-                    Y.Assert.areEqual(self.$tpl.find('input[name=rrd_ds_label]').size(), 1);
+                    Y.Assert.areEqual(
+                        self.$tpl.find('input[name=rrd_ds_label]').size(), 1);
                 }, 1000
             );
-        },
+        }
     }));
 
 
@@ -451,7 +459,7 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         name: "jarmon.ChartEditor",
 
         setUp: function() {
-            this.$tpl = $('<div/>').appendTo($('body'))
+            this.$tpl = $('<div/>').appendTo($('body'));
             var c = new jarmon.ChartEditor(
                 this.$tpl,
                 {
