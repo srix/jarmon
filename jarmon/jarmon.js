@@ -657,7 +657,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
             }
         }
 
-        if(self.options.yaxis.tickDecimals !== null) {
+        if(typeof(self.options.yaxis.tickDecimals) === 'number') {
             decimalPlaces = self.options.yaxis.tickDecimals;
         }
 
