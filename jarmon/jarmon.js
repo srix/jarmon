@@ -12,7 +12,6 @@
  * - JavascriptRRD: http://javascriptrrd.sourceforge.net/
  * - jQuery: http://jquery.com/
  * - Flot: http://code.google.com/p/flot/
- * - MochiKit.Async: http://www.mochikit.com/
  *
  * @module jarmon
  */
