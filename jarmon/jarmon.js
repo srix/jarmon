@@ -23,7 +23,7 @@
  * @class jarmon
  * @static
  */
-if(typeof jarmon == 'undefined') {
+if(typeof(jarmon) === 'undefined') {
     var jarmon = {};
 }
 
@@ -49,7 +49,7 @@ var IEBinaryToArray_ByteStr_Script =
 document.write(IEBinaryToArray_ByteStr_Script);
 
 jarmon.GetIEByteArray_ByteStr = function(IEByteArray) {
-    if(typeof(jarmon.ByteMapping) == 'undefined') {
+    if(typeof(jarmon.ByteMapping) === 'undefined') {
         jarmon.ByteMapping = {};
         for ( var i = 0; i < 256; i++ ) {
             for ( var j = 0; j < 256; j++ ) {
@@ -105,7 +105,7 @@ jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
     var doubleMantExpLo=Math.pow(2,-52);
     var doubleMantExpFast=Math.pow(2,-20);
 
-    if (typeof strData == "string") {
+    if (typeof strData === "string") {
         dataLength = iDataLength || data.length;
     } else {
       throw new jarmon.InvalidBinaryFile(
@@ -195,12 +195,12 @@ jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
         var iMantHi=((((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5) << 8) + iByte4;
         var iMantLo=((((iByte3) << 8) + iByte2) << 8) + iByte1;
 
-        if (iExpRaw==0) return 0.0;
-        if (iExpRaw==0x7ff) return undefined;
+        if (iExpRaw===0) return 0.0;
+        if (iExpRaw===0x7ff) return undefined;
 
         var iExp=(iExpRaw & 0x7FF)-1023;
 
-        var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
+        var dDouble = ((iSign===1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
         return dDouble;
     };
     // added
@@ -214,12 +214,12 @@ jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
         var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
         var iMant=((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5;
 
-        if (iExpRaw==0) return 0.0;
-        if (iExpRaw==0x7ff) return undefined;
+        if (iExpRaw===0) return 0.0;
+        if (iExpRaw===0x7ff) return undefined;
 
         var iExp=(iExpRaw & 0x7FF)-1023;
 
-        var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
+        var dDouble = ((iSign===1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
         return dDouble;
     };
 
@@ -254,7 +254,7 @@ jarmon.downloadBinary = function(url) {
         },
         success: function(data, textStatus, jqXHR) {
             // In IE we return the responseBody
-            if(typeof(this._nativeXhr.responseBody) != 'undefined') {
+            if(typeof(this._nativeXhr.responseBody) !== 'undefined') {
                 d.resolve(
                     new jarmon.BinaryFile(
                         jarmon.GetIEByteArray_ByteStr(
@@ -295,7 +295,7 @@ jarmon.localTimeFormatter = function (v, axis) {
     var d = new Date(v + axis.options.tzoffset);
 
     // first check global format
-    if (axis.options.timeformat != null) {
+    if (axis.options.timeformat !== null) {
         return $.plot.formatDate(
             d, axis.options.timeformat, axis.options.monthNames);
     }
@@ -304,6 +304,7 @@ jarmon.localTimeFormatter = function (v, axis) {
     var span = axis.max - axis.min;
     var suffix = (axis.options.twelveHourClock) ? " %p" : "";
 
+    var fmt;
     if (t < timeUnitSize.minute)
         fmt = "%h:%M:%S" + suffix;
     else if (t < timeUnitSize.day) {
@@ -375,12 +376,12 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
         endTime = endTimeJs/1000;
     }
 
-    if(dsId == null) {
+    if(typeof(dsId) === 'undefined' && dsId !== null) {
         dsId = 0;
     }
     var ds = this.rrd.getDS(dsId);
 
-    if(cfName == null) {
+    if(typeof(cfName) === 'undefined' && cfName !== null) {
         cfName = 'AVERAGE';
     }
 
@@ -392,7 +393,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
         rra = this.rrd.getRRA(i);
 
         // If this rra doesn't use the requested CF then move on to the next.
-        if(rra.getCFName() != cfName) {
+        if(rra.getCFName() !== cfName) {
             continue;
         }
 
@@ -450,7 +451,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
     // Now get the date of the earliest record in entire rrd file, ie that of
     // the last (longest range) rra.
     rra = this.rrd.getRRA(this.rrd.getNrRRAs()-1);
-    firstUpdated = lastUpdated - (rra.getNrRows() -1) * rra.getStep();
+    var firstUpdated = lastUpdated - (rra.getNrRows() -1) * rra.getStep();
 
     return {'label': ds.getName(), 'data': flotData, 'unit': this.unit,
             'firstUpdated': firstUpdated*1000.0,
@@ -618,7 +619,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
         self.draw();
     });
 
-    this.options['yaxis']['ticks'] = function(axis) {
+    this.options.yaxis.ticks = function(axis) {
         /*
          * Choose a suitable SI multiplier based on the min and max values from
          * the axis and then generate appropriate yaxis tick labels.
@@ -659,7 +660,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
             }
         }
 
-        if(self.options.yaxis.tickDecimals != null) {
+        if(self.options.yaxis.tickDecimals !== null) {
             decimalPlaces = self.options.yaxis.tickDecimals;
         }
 
@@ -681,22 +682,22 @@ jarmon.Chart = function(template, recipe,  downloader) {
 };
 
 jarmon.Chart.prototype.setup = function() {
-    this.template.find('.title').text(this.recipe['title']);
+    this.template.find('.title').text(this.recipe.title);
     this.data = [];
     var recipe = this.recipe;
     var dataDict = {};
-    for(var j=0; j<recipe['data'].length; j++) {
-        var rrd = recipe['data'][j][0];
-        var ds = recipe['data'][j][1];
+    for(var j=0; j<recipe.data.length; j++) {
+        var rrd = recipe.data[j][0];
+        var ds = recipe.data[j][1];
         // Test for integer DS index as opposed to DS name
-        var dsi = parseInt(ds);
-        if(ds.toString() == dsi.toString()) {
+        var dsi = parseInt(ds, 10);
+        if(ds.toString() === dsi.toString()) {
             ds = dsi;
         }
-        var label = recipe['data'][j][2];
-        var unit = recipe['data'][j][3];
+        var label = recipe.data[j][2];
+        var unit = recipe.data[j][3];
 
-        if(typeof dataDict[rrd] == 'undefined') {
+        if(typeof(dataDict[rrd]) === 'undefined') {
             dataDict[rrd] = new jarmon.RrdQueryRemote(
                 rrd, unit, this.downloader);
         }
@@ -716,7 +717,7 @@ jarmon.Chart.prototype.addData = function(label, db, enabled) {
      * @param enabled {Boolean} true if you want this data plotted on the chart,
      *      false if not.
      **/
-    if(typeof enabled == 'undefined') {
+    if(typeof(enabled) === 'undefined') {
         enabled = true;
     }
     this.data.push([label, db, enabled]);
@@ -731,7 +732,7 @@ jarmon.Chart.prototype.switchDataEnabled = function(label) {
      *      disabled.
      **/
     for(var i=0; i<this.data.length; i++) {
-        if(this.data[i][0] == label) {
+        if(this.data[i][0] === label) {
             this.data[i][2] = !this.data[i][2];
         }
     }
@@ -800,7 +801,7 @@ jarmon.Chart.prototype.draw = function() {
                 if(label) {
                     data[i].label = label;
                 }
-                if(typeof data[i].unit != 'undefined') {
+                if(typeof(data[i].unit) !== 'undefined') {
                     // Just use the last unit for now
                     unit = data[i].unit;
                 }
@@ -915,15 +916,15 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
         )
     ).submit(
         function(e) {
-            self.data.rrdUrl = this['rrd_url'].value;
-            $placeholder = $(this).find('.next').empty();
+            self.data.rrdUrl = this.rrd_url.value;
+            var $placeholder = $(this).find('.next').empty();
             new jarmon.RrdQueryRemote(
                 self.data.rrdUrl).getDSNames().addCallback(
                 function($placeholder, dsNames) {
                     if(dsNames.length > 1) {
                         $('<p/>').text(
-                            'The RRD file contains multiple data sources. \
-                             Choose one:').appendTo($placeholder);
+                            'The RRD file contains multiple data sources. ' +
+                                'Choose one:').appendTo($placeholder);
 
                         $(dsNames).map(
                             function(i, el) {
@@ -989,8 +990,8 @@ jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
         $('<div/>', {'class': 'next'})
     ).submit(
         function(e) {
-            self.data.dsLabel = this['dsLabel'].value;
-            self.data.dsUnit = this['dsUnit'].value;
+            self.data.dsLabel = this.dsLabel.value;
+            self.data.dsUnit = this.dsUnit.value;
             self.drawDsSummary();
             return false;
         }
@@ -1029,7 +1030,7 @@ jarmon.ChartEditor = function($tpl, chart) {
         {self: this},
         function(e) {
             var self = e.data.self;
-            self.chart.recipe.title = this['title'].value;
+            self.chart.recipe.title = this.title.value;
             self.chart.recipe.data = $(this).find('.datasources tbody tr').map(
                 function(i, el) {
                     return $(el).find('input[type=text]').map(
@@ -1242,7 +1243,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     $('ul.css-tabs > li > input', $tpl[0]).live(
         'keypress',
         function(e) {
-            if(e.which == 13) {
+            if(e.which === 13) {
                 $(this).blur();
             }
         }
@@ -1491,7 +1492,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
 
     options.bind('change', function(e) {
         // No point in updating if the user chose custom.
-        if($(this).val() != 'custom') {
+        if($(this).val() !== 'custom') {
             self.update();
         }
     });
@@ -1501,7 +1502,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
     this.ui.find('[name="from_custom"]').bind('change',
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
-            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
+            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val(), 10);
             self.setTimeRange(
                 new Date(this.value + ' UTC').getTime() - tzoffset, null);
             self.update();
@@ -1511,7 +1512,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
     this.ui.find('[name="to_custom"]').bind('change',
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
-            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
+            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val(), 10);
             self.setTimeRange(
                 null, new Date(this.value + ' UTC').getTime() - tzoffset);
             self.update();
@@ -1532,7 +1533,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 label += ' - ';
             }
             val = Math.abs(val).toString();
-            if(val.length == 1) {
+            if(val.length === 1) {
                 label += '0';
             }
             label += val + '00';
@@ -1605,7 +1606,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 // returns NaN we know it's an invalid date
                 // XXX: is there a better way to check for valid date?
                 currentDate = new Date($(this).siblings(input_selector).val());
-                if(currentDate.getTime() != NaN) {
+                if(! isNaN(currentDate.getTime()) ) {
                     $(this).data(
                         'dateinput')._initial_val = currentDate.getTime();
                     $(this).data('dateinput').setValue(currentDate);
@@ -1624,7 +1625,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 var oldStamp = $(this).data('dateinput')._initial_val;
                 var newDate = $(this).data('dateinput').getValue();
                 // Only update the form field if the date has changed.
-                if(oldStamp != newDate.getTime()) {
+                if(oldStamp !== newDate.getTime()) {
                     // Update the prepared time range select box to
                     // value "custom"
                     self.ui.find('[name="from_standard"]').val('custom');
@@ -1681,16 +1682,16 @@ jarmon.ChartCoordinator.prototype.update = function() {
 
     var now = new Date().getTime();
     for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
-        if(jarmon.timeRangeShortcuts[i][0] == selection) {
+        if(jarmon.timeRangeShortcuts[i][0] === selection) {
             var range = jarmon.timeRangeShortcuts[i][1](now);
             this.setTimeRange(range[0], range[1]);
             break;
         }
     }
 
-    var startTime = parseInt(this.ui.find('[name="from"]').val());
-    var endTime = parseInt(this.ui.find('[name="to"]').val());
-    var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val());
+    var startTime = parseInt(this.ui.find('[name="from"]').val(), 10);
+    var endTime = parseInt(this.ui.find('[name="to"]').val(), 10);
+    var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val(), 10);
 
     this.ui.find('[name="from_custom"]').val(
         new Date(startTime + tzoffset)
@@ -1774,10 +1775,10 @@ jarmon.ChartCoordinator.prototype.setTimeRange = function(from, to) {
      * @param startTime {Number} The start timestamp
      * @param endTime {Number} The end timestamp
      **/
-    if(from != null) {
+    if(typeof(from) !== 'undefined' && from !== null) {
         this.ui.find('[name="from"]').val(from);
     }
-    if(to != null) {
+    if(typeof(to) !== 'undefined' && to !== null) {
         this.ui.find('[name="to"]').val(to);
     }
 };
