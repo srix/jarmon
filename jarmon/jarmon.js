@@ -832,7 +832,7 @@ jarmon.Chart.prototype.draw = function() {
                 .css({'width': '100px',
                       'position': 'absolute',
                       'top': '80px',
-                      'left': '-120px',
+                      'left': '-110px',
                       'text-align': 'right'});
             self.template.find('.chart').append(yaxisUnitLabel);
 
