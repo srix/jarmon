@@ -362,9 +362,9 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
 
     if (startTimeJs >= endTimeJs) {
         throw RangeError(
-            ['starttime must be less than endtime. ',
-             'starttime: ', startTimeJs,
-             'endtime: ', endTimeJs].join(''));
+            ['starttime must be less than endtime.',
+             'starttime:', startTimeJs,
+             'endtime:', endTimeJs].join(' '));
     }
 
     var startTime = startTimeJs/1000;
@@ -518,16 +518,17 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
             if(res instanceof Error) {
                 ret.reject(res);
             } else {
-                ret.resolve(res);
+                var rq = new jarmon.RrdQuery(res, self.unit);
+                try {
+                    ret.resolve(rq[methodName].apply(rq, args));
+                } catch(e) {
+                    ret.reject(e);
+                }
             }
             return res;
         });
 
-    return ret.pipe(
-        function(rrd) {
-            var rq = new jarmon.RrdQuery(rrd, self.unit);
-            return rq[methodName].apply(rq, args);
-        });
+    return ret;
 };
 
 
