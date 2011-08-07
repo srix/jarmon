@@ -12,7 +12,6 @@
  * - JavascriptRRD: http://javascriptrrd.sourceforge.net/
  * - jQuery: http://jquery.com/
  * - Flot: http://code.google.com/p/flot/
- * - MochiKit.Async: http://www.mochikit.com/
  *
  * @module jarmon
  */
@@ -23,7 +22,7 @@
  * @class jarmon
  * @static
  */
-if(typeof jarmon == 'undefined') {
+if(typeof(jarmon) === 'undefined') {
     var jarmon = {};
 }
 
@@ -31,38 +30,38 @@ if(typeof jarmon == 'undefined') {
 // byte string.
 // http://miskun.com/javascript/internet-explorer-and-binary-files-data-access/
 var IEBinaryToArray_ByteStr_Script =
-	"<!-- IEBinaryToArray_ByteStr -->\r\n"+
-	"<script type='text/vbscript'>\r\n"+
-	"Function IEBinaryToArray_ByteStr(Binary)\r\n"+
-	"	IEBinaryToArray_ByteStr = CStr(Binary)\r\n"+
-	"End Function\r\n"+
-	"Function IEBinaryToArray_ByteStr_Last(Binary)\r\n"+
-	"	Dim lastIndex\r\n"+
-	"	lastIndex = LenB(Binary)\r\n"+
-	"	if lastIndex mod 2 Then\r\n"+
-	"		IEBinaryToArray_ByteStr_Last = Chr( AscB( MidB( Binary, lastIndex, 1 ) ) )\r\n"+
-	"	Else\r\n"+
-	"		IEBinaryToArray_ByteStr_Last = "+'""'+"\r\n"+
-	"	End If\r\n"+
-	"End Function\r\n"+
-	"</script>\r\n";
+    "<!-- IEBinaryToArray_ByteStr -->\r\n"+
+    "<script type='text/vbscript'>\r\n"+
+    "Function IEBinaryToArray_ByteStr(Binary)\r\n"+
+    "	IEBinaryToArray_ByteStr = CStr(Binary)\r\n"+
+    "End Function\r\n"+
+    "Function IEBinaryToArray_ByteStr_Last(Binary)\r\n"+
+    "	Dim lastIndex\r\n"+
+    "	lastIndex = LenB(Binary)\r\n"+
+    "	if lastIndex mod 2 Then\r\n"+
+    "		IEBinaryToArray_ByteStr_Last = Chr( AscB( MidB( Binary, lastIndex, 1 ) ) )\r\n"+
+    "	Else\r\n"+
+    "		IEBinaryToArray_ByteStr_Last = "+'""'+"\r\n"+
+    "	End If\r\n"+
+    "End Function\r\n"+
+    "</script>\r\n";
 document.write(IEBinaryToArray_ByteStr_Script);
 
 jarmon.GetIEByteArray_ByteStr = function(IEByteArray) {
-    if(typeof(jarmon.ByteMapping) == 'undefined') {
+    if(typeof(jarmon.ByteMapping) === 'undefined') {
         jarmon.ByteMapping = {};
         for ( var i = 0; i < 256; i++ ) {
-	        for ( var j = 0; j < 256; j++ ) {
-		        jarmon.ByteMapping[ String.fromCharCode( i + j * 256 ) ] =
-			        String.fromCharCode(i) + String.fromCharCode(j);
-	            }
+            for ( var j = 0; j < 256; j++ ) {
+                jarmon.ByteMapping[ String.fromCharCode( i + j * 256 ) ] =
+                    String.fromCharCode(i) + String.fromCharCode(j);
+                }
         }
     }
 
-	var rawBytes = IEBinaryToArray_ByteStr(IEByteArray);
-	var lastChr = IEBinaryToArray_ByteStr_Last(IEByteArray);
-	return rawBytes.replace(/[\s\S]/g,
-		function( match ) { return jarmon.ByteMapping[match]; }) + lastChr;
+    var rawBytes = IEBinaryToArray_ByteStr(IEByteArray);
+    var lastChr = IEBinaryToArray_ByteStr_Last(IEByteArray);
+    return rawBytes.replace(/[\s\S]/g,
+        function( match ) { return jarmon.ByteMapping[match]; }) + lastChr;
 };
 
 /*
@@ -98,134 +97,134 @@ jarmon.InvalidBinaryFile.prototype.toString = function() {
 jarmon.BinaryFile = function(strData, iDataOffset, iDataLength) {
 
     var data = strData;
-	var dataOffset = iDataOffset || 0;
-	var dataLength = 0;
-	// added
-	var doubleMantExpHi=Math.pow(2,-28);
-	var doubleMantExpLo=Math.pow(2,-52);
-	var doubleMantExpFast=Math.pow(2,-20);
+    var dataOffset = iDataOffset || 0;
+    var dataLength = 0;
+    // added
+    var doubleMantExpHi=Math.pow(2,-28);
+    var doubleMantExpLo=Math.pow(2,-52);
+    var doubleMantExpFast=Math.pow(2,-20);
 
-	if (typeof strData == "string") {
-		dataLength = iDataLength || data.length;
-	} else {
-	  throw new jarmon.InvalidBinaryFile(
+    if (typeof strData === "string") {
+        dataLength = iDataLength || data.length;
+    } else {
+      throw new jarmon.InvalidBinaryFile(
           "Unsupported type " + (typeof strData));
-	}
+    }
 
-	this.getRawData = function() {
-		return data;
-	};
+    this.getRawData = function() {
+        return data;
+    };
 
-	this.getByteAt = function(iOffset) {
-		return data.charCodeAt(iOffset + dataOffset) & 0xFF;
-	};
+    this.getByteAt = function(iOffset) {
+        return data.charCodeAt(iOffset + dataOffset) & 0xFF;
+    };
 
-	this.getLength = function() {
-		return dataLength;
-	};
+    this.getLength = function() {
+        return dataLength;
+    };
 
-	this.getSByteAt = function(iOffset) {
-		var iByte = this.getByteAt(iOffset);
-		if (iByte > 127)
-			return iByte - 256;
-		else
-			return iByte;
-	};
+    this.getSByteAt = function(iOffset) {
+        var iByte = this.getByteAt(iOffset);
+        if (iByte > 127)
+            return iByte - 256;
+        else
+            return iByte;
+    };
 
-	this.getShortAt = function(iOffset) {
-		var iShort = (
+    this.getShortAt = function(iOffset) {
+        var iShort = (
             this.getByteAt(iOffset + 1) << 8) + this.getByteAt(iOffset);
-		if (iShort < 0) iShort += 65536;
-		return iShort;
-	};
-	this.getSShortAt = function(iOffset) {
-		var iUShort = this.getShortAt(iOffset);
-		if (iUShort > 32767)
-			return iUShort - 65536;
-		else
-			return iUShort;
-	};
-	this.getLongAt = function(iOffset) {
-		var iByte1 = this.getByteAt(iOffset),
-			iByte2 = this.getByteAt(iOffset + 1),
-			iByte3 = this.getByteAt(iOffset + 2),
-			iByte4 = this.getByteAt(iOffset + 3);
+        if (iShort < 0) iShort += 65536;
+        return iShort;
+    };
+    this.getSShortAt = function(iOffset) {
+        var iUShort = this.getShortAt(iOffset);
+        if (iUShort > 32767)
+            return iUShort - 65536;
+        else
+            return iUShort;
+    };
+    this.getLongAt = function(iOffset) {
+        var iByte1 = this.getByteAt(iOffset),
+            iByte2 = this.getByteAt(iOffset + 1),
+            iByte3 = this.getByteAt(iOffset + 2),
+            iByte4 = this.getByteAt(iOffset + 3);
 
-		var iLong = (((((iByte4 << 8) + iByte3) << 8) + iByte2) << 8) + iByte1;
-		if (iLong < 0) iLong += 4294967296;
-		return iLong;
-	};
-	this.getSLongAt = function(iOffset) {
-		var iULong = this.getLongAt(iOffset);
-		if (iULong > 2147483647)
-			return iULong - 4294967296;
-		else
-			return iULong;
-	};
-	this.getStringAt = function(iOffset, iLength) {
-		var aStr = [];
-		for (var i=iOffset,j=0;i<iOffset+iLength;i++,j++) {
-			aStr[j] = String.fromCharCode(this.getByteAt(i));
-		}
-		return aStr.join("");
-	};
+        var iLong = (((((iByte4 << 8) + iByte3) << 8) + iByte2) << 8) + iByte1;
+        if (iLong < 0) iLong += 4294967296;
+        return iLong;
+    };
+    this.getSLongAt = function(iOffset) {
+        var iULong = this.getLongAt(iOffset);
+        if (iULong > 2147483647)
+            return iULong - 4294967296;
+        else
+            return iULong;
+    };
+    this.getStringAt = function(iOffset, iLength) {
+        var aStr = [];
+        for (var i=iOffset,j=0;i<iOffset+iLength;i++,j++) {
+            aStr[j] = String.fromCharCode(this.getByteAt(i));
+        }
+        return aStr.join("");
+    };
 
-	// Added
-	this.getCStringAt = function(iOffset, iMaxLength) {
-		var aStr = [];
-		for (var i=iOffset,j=0;(i<iOffset+iMaxLength) &&
+    // Added
+    this.getCStringAt = function(iOffset, iMaxLength) {
+        var aStr = [];
+        for (var i=iOffset,j=0;(i<iOffset+iMaxLength) &&
              (this.getByteAt(i)>0);i++,j++) {
-			aStr[j] = String.fromCharCode(this.getByteAt(i));
-		}
-		return aStr.join("");
-	};
+            aStr[j] = String.fromCharCode(this.getByteAt(i));
+        }
+        return aStr.join("");
+    };
 
-	// Added
-	this.getDoubleAt = function(iOffset) {
-		var iByte1 = this.getByteAt(iOffset),
-			iByte2 = this.getByteAt(iOffset + 1),
-			iByte3 = this.getByteAt(iOffset + 2),
-		        iByte4 = this.getByteAt(iOffset + 3),
-		        iByte5 = this.getByteAt(iOffset + 4),
-			iByte6 = this.getByteAt(iOffset + 5),
-			iByte7 = this.getByteAt(iOffset + 6),
-			iByte8 = this.getByteAt(iOffset + 7);
-		var iSign=iByte8 >> 7;
-		var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
-		var iMantHi=((((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5) << 8) + iByte4;
-		var iMantLo=((((iByte3) << 8) + iByte2) << 8) + iByte1;
+    // Added
+    this.getDoubleAt = function(iOffset) {
+        var iByte1 = this.getByteAt(iOffset),
+            iByte2 = this.getByteAt(iOffset + 1),
+            iByte3 = this.getByteAt(iOffset + 2),
+                iByte4 = this.getByteAt(iOffset + 3),
+                iByte5 = this.getByteAt(iOffset + 4),
+            iByte6 = this.getByteAt(iOffset + 5),
+            iByte7 = this.getByteAt(iOffset + 6),
+            iByte8 = this.getByteAt(iOffset + 7);
+        var iSign=iByte8 >> 7;
+        var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
+        var iMantHi=((((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5) << 8) + iByte4;
+        var iMantLo=((((iByte3) << 8) + iByte2) << 8) + iByte1;
 
-		if (iExpRaw==0) return 0.0;
-		if (iExpRaw==0x7ff) return undefined;
+        if (iExpRaw===0) return 0.0;
+        if (iExpRaw===0x7ff) return undefined;
 
-		var iExp=(iExpRaw & 0x7FF)-1023;
+        var iExp=(iExpRaw & 0x7FF)-1023;
 
-		var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
-		return dDouble;
-	};
-	// added
-	// Extracts only 4 bytes out of 8, loosing in precision (20 bit mantissa)
-	this.getFastDoubleAt = function(iOffset) {
-		var iByte5 = this.getByteAt(iOffset + 4),
-			iByte6 = this.getByteAt(iOffset + 5),
-			iByte7 = this.getByteAt(iOffset + 6),
-			iByte8 = this.getByteAt(iOffset + 7);
-		var iSign=iByte8 >> 7;
-		var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
-		var iMant=((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5;
+        var dDouble = ((iSign===1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMantLo*doubleMantExpLo + iMantHi*doubleMantExpHi);
+        return dDouble;
+    };
+    // added
+    // Extracts only 4 bytes out of 8, loosing in precision (20 bit mantissa)
+    this.getFastDoubleAt = function(iOffset) {
+        var iByte5 = this.getByteAt(iOffset + 4),
+            iByte6 = this.getByteAt(iOffset + 5),
+            iByte7 = this.getByteAt(iOffset + 6),
+            iByte8 = this.getByteAt(iOffset + 7);
+        var iSign=iByte8 >> 7;
+        var iExpRaw=((iByte8 & 0x7F)<< 4) + (iByte7 >> 4);
+        var iMant=((((iByte7 & 0x0F) << 8) + iByte6) << 8) + iByte5;
 
-		if (iExpRaw==0) return 0.0;
-		if (iExpRaw==0x7ff) return undefined;
+        if (iExpRaw===0) return 0.0;
+        if (iExpRaw===0x7ff) return undefined;
 
-		var iExp=(iExpRaw & 0x7FF)-1023;
+        var iExp=(iExpRaw & 0x7FF)-1023;
 
-		var dDouble = ((iSign==1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
-		return dDouble;
-	};
+        var dDouble = ((iSign===1)?-1:1)*Math.pow(2,iExp)*(1.0 + iMant*doubleMantExpFast);
+        return dDouble;
+    };
 
-	this.getCharAt = function(iOffset) {
-		return String.fromCharCode(this.getByteAt(iOffset));
-	};
+    this.getCharAt = function(iOffset) {
+        return String.fromCharCode(this.getByteAt(iOffset));
+    };
 };
 
 jarmon.downloadBinary = function(url) {
@@ -237,11 +236,11 @@ jarmon.downloadBinary = function(url) {
      * @return {Object} A deferred which will callback with an instance of
      * javascriptrrd.BinaryFile
      */
-
-    var d = new MochiKit.Async.Deferred();
+    var d = jQuery.Deferred();
     $.ajax({
         url: url,
         dataType: 'text',
+        cache: false,
         mimeType: 'text/plain; charset=x-user-defined',
         xhr: function() {
             // Save a reference to the native xhr object - we need it later
@@ -249,23 +248,23 @@ jarmon.downloadBinary = function(url) {
             this._nativeXhr = jQuery.ajaxSettings.xhr();
             return this._nativeXhr;
         },
+        complete: function(jqXHR, textStatus) {
+            this._nativeXhr = null;
+            delete this._nativeXhr;
+        },
         success: function(data, textStatus, jqXHR) {
             // In IE we return the responseBody
-            if(typeof(this._nativeXhr.responseBody) != 'undefined') {
-                d.callback(
+            if(typeof(this._nativeXhr.responseBody) !== 'undefined') {
+                d.resolve(
                     new jarmon.BinaryFile(
                         jarmon.GetIEByteArray_ByteStr(
                             this._nativeXhr.responseBody)));
             } else {
-                d.callback(new jarmon.BinaryFile(data));
+                d.resolve(new jarmon.BinaryFile(data));
             }
         },
         error: function(xhr, textStatus, errorThrown) {
-            d.errback(new Error(xhr.status));
-        },
-        complete: function(jqXHR, textStatus) {
-            this._nativeXhr = null;
-            delete this._nativeXhr;
+            d.reject(new Error(textStatus + ':' + xhr.status));
         }
     });
     return d;
@@ -296,13 +295,16 @@ jarmon.localTimeFormatter = function (v, axis) {
     var d = new Date(v + axis.options.tzoffset);
 
     // first check global format
-    if (axis.options.timeformat != null)
-        return $.plot.formatDate(d, axis.options.timeformat, axis.options.monthNames);
+    if (axis.options.timeformat !== null) {
+        return $.plot.formatDate(
+            d, axis.options.timeformat, axis.options.monthNames);
+    }
 
     var t = axis.tickSize[0] * timeUnitSize[axis.tickSize[1]];
     var span = axis.max - axis.min;
     var suffix = (axis.options.twelveHourClock) ? " %p" : "";
 
+    var fmt;
     if (t < timeUnitSize.minute)
         fmt = "%h:%M:%S" + suffix;
     else if (t < timeUnitSize.day) {
@@ -341,7 +343,8 @@ jarmon.RrdQuery = function(rrd, unit) {
     this.unit = unit;
 };
 
-jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfName) {
+jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
+                                             dsId, cfName) {
     /**
      * Generate a Flot compatible data object containing rows between start and
      * end time. The rows are taken from the first RRA whose data spans the
@@ -359,9 +362,9 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
 
     if (startTimeJs >= endTimeJs) {
         throw RangeError(
-            ['starttime must be less than endtime. ',
-             'starttime: ', startTimeJs,
-             'endtime: ', endTimeJs].join(''));
+            ['starttime must be less than endtime.',
+             'starttime:', startTimeJs,
+             'endtime:', endTimeJs].join(' '));
     }
 
     var startTime = startTimeJs/1000;
@@ -373,12 +376,12 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
         endTime = endTimeJs/1000;
     }
 
-    if(dsId == null) {
+    if(typeof(dsId) === 'undefined' && dsId !== null) {
         dsId = 0;
     }
     var ds = this.rrd.getDS(dsId);
 
-    if(cfName == null) {
+    if(typeof(cfName) === 'undefined' && cfName !== null) {
         cfName = 'AVERAGE';
     }
 
@@ -390,7 +393,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
         rra = this.rrd.getRRA(i);
 
         // If this rra doesn't use the requested CF then move on to the next.
-        if(rra.getCFName() != cfName) {
+        if(rra.getCFName() !== cfName) {
             continue;
         }
 
@@ -448,7 +451,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfNam
     // Now get the date of the earliest record in entire rrd file, ie that of
     // the last (longest range) rra.
     rra = this.rrd.getRRA(this.rrd.getNrRRAs()-1);
-    firstUpdated = lastUpdated - (rra.getNrRows() -1) * rra.getStep();
+    var firstUpdated = lastUpdated - (rra.getNrRows() -1) * rra.getStep();
 
     return {'label': ds.getName(), 'data': flotData, 'unit': this.unit,
             'firstUpdated': firstUpdated*1000.0,
@@ -490,44 +493,43 @@ jarmon.RrdQueryRemote = function(url, unit, downloader) {
 jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
     // Download the rrd if there has never been a download and don't start
     // another download if one is already in progress.
+    var self = this;
     if(!this._download) {
-        this._download = this.downloader(this.url)
-                .addCallback(
-                    function(self, binary) {
-                        // Upon successful download convert the resulting binary
-                        // into an RRD file and pass it on to the next callback
-                        // in the chain.
-                        var rrd = new RRDFile(binary);
-                        self.lastUpdate = rrd.getLastUpdate();
-                        return rrd;
-                    }, this);
+        this._download = this.downloader(this.url);
     }
 
     // Set up a deferred which will call getData on the local RrdQuery object
     // returning a flot compatible data object to the caller.
-    var ret = new MochiKit.Async.Deferred().addCallback(
-        function(self, methodName, args, rrd) {
-            var rq = new jarmon.RrdQuery(rrd, self.unit);
-            return rq[methodName].apply(rq, args);
-        }, this, methodName, args);
+    var ret = jQuery.Deferred();
 
     // Add a pair of callbacks to the current download which will callback the
     // result which we setup above.
-    this._download.addBoth(
-        function(ret, res) {
+    this._download.always(
+        function(res) {
             if(res instanceof Error) {
-                ret.errback(res);
+                ret.reject(res);
             } else {
-                ret.callback(res);
+                // Upon successful download convert the resulting binary
+                // into an RRD file
+                var rrd = new RRDFile(res);
+                self.lastUpdate = rrd.getLastUpdate();
+
+                var rq = new jarmon.RrdQuery(rrd, self.unit);
+                try {
+                    ret.resolve(rq[methodName].apply(rq, args));
+                } catch(e) {
+                    ret.reject(e);
+                }
             }
             return res;
-        }, ret);
+        });
 
     return ret;
 };
 
 
-jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId, cfName) {
+jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime,
+                                                   dsId, cfName) {
     /**
      * Return a Flot compatible data series asynchronously.
      *
@@ -614,7 +616,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
         self.draw();
     });
 
-    this.options['yaxis']['ticks'] = function(axis) {
+    this.options.yaxis.ticks = function(axis) {
         /*
          * Choose a suitable SI multiplier based on the min and max values from
          * the axis and then generate appropriate yaxis tick labels.
@@ -640,7 +642,8 @@ jarmon.Chart = function(template, recipe,  downloader) {
         var minVal = axis.min/Math.pow(1000, si);
         var maxVal = axis.max/Math.pow(1000, si);
 
-        var stepSizes = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 5, 10, 25, 50, 100, 250];
+        var stepSizes = [0.01, 0.05, 0.1, 0.25, 0.5,
+                         1, 5, 10, 25, 50, 100, 250];
         var realStep = (maxVal - minVal)/5.0;
 
         var stepSize, decimalPlaces = 0;
@@ -654,7 +657,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
             }
         }
 
-        if(self.options.yaxis.tickDecimals != null) {
+        if(self.options.yaxis.tickDecimals !== null) {
             decimalPlaces = self.options.yaxis.tickDecimals;
         }
 
@@ -676,23 +679,24 @@ jarmon.Chart = function(template, recipe,  downloader) {
 };
 
 jarmon.Chart.prototype.setup = function() {
-    this.template.find('.title').text(this.recipe['title']);
+    this.template.find('.title').text(this.recipe.title);
     this.data = [];
     var recipe = this.recipe;
     var dataDict = {};
-    for(var j=0; j<recipe['data'].length; j++) {
-        var rrd = recipe['data'][j][0];
-        var ds = recipe['data'][j][1];
+    for(var j=0; j<recipe.data.length; j++) {
+        var rrd = recipe.data[j][0];
+        var ds = recipe.data[j][1];
         // Test for integer DS index as opposed to DS name
-        var dsi = parseInt(ds);
-        if(ds.toString() == dsi.toString()) {
+        var dsi = parseInt(ds, 10);
+        if(ds.toString() === dsi.toString()) {
             ds = dsi;
         }
-        var label = recipe['data'][j][2];
-        var unit = recipe['data'][j][3];
+        var label = recipe.data[j][2];
+        var unit = recipe.data[j][3];
 
-        if(typeof dataDict[rrd] == 'undefined') {
-            dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, this.downloader);
+        if(typeof(dataDict[rrd]) === 'undefined') {
+            dataDict[rrd] = new jarmon.RrdQueryRemote(
+                rrd, unit, this.downloader);
         }
         this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
     }
@@ -710,7 +714,7 @@ jarmon.Chart.prototype.addData = function(label, db, enabled) {
      * @param enabled {Boolean} true if you want this data plotted on the chart,
      *      false if not.
      **/
-    if(typeof enabled == 'undefined') {
+    if(typeof(enabled) === 'undefined') {
         enabled = true;
     }
     this.data.push([label, db, enabled]);
@@ -725,7 +729,7 @@ jarmon.Chart.prototype.switchDataEnabled = function(label) {
      *      disabled.
      **/
     for(var i=0; i<this.data.length; i++) {
-        if(this.data[i][0] == label) {
+        if(this.data[i][0] === label) {
             this.data[i][2] = !this.data[i][2];
         }
     }
@@ -754,6 +758,7 @@ jarmon.Chart.prototype.draw = function() {
      * @return {Object} A Deferred which calls back with the chart data when
      *      the chart has been rendered.
      **/
+    var self = this;
     this.template.addClass('loading');
 
     var result;
@@ -766,8 +771,7 @@ jarmon.Chart.prototype.draw = function() {
             // empty dataset
             // 0 values so that it can contribute to a stacked chart.
             // 0 linewidth so that it doesn't cause a line in stacked chart
-            result = new MochiKit.Async.Deferred();
-            result.callback({
+            result = {
                 data: [
                     [this.startTime, 0],
                     [this.endTime, 0]
@@ -775,94 +779,101 @@ jarmon.Chart.prototype.draw = function() {
                 lines: {
                     lineWidth: 0
                 }
-            });
+            };
         }
 
         results.push(result);
     }
 
-    return MochiKit.Async.gatherResults(results)
-            .addCallback(
-                function(self, data) {
-                    // Clear any previous error messages.
-                    self.template.find('.error').empty().hide();
+    return jQuery.when.apply(null, results).pipe(
+        function() {
+            var data = Array.prototype.slice.call(arguments);
+            // Clear any previous error messages.
+            self.template.find('.error').empty().hide();
 
-                    var i, label, disabled = [];
-                    unit = '';
-                    for(i=0; i<data.length; i++) {
-                        label = self.data[i][0];
-                        if(label) {
-                            data[i].label = label;
-                        }
-                        if(typeof data[i].unit != 'undefined') {
-                            // Just use the last unit for now
-                            unit = data[i].unit;
-                        }
-                        if(!self.data[i][2]) {
-                            disabled.push(label);
-                        }
+            var i, label, disabled = [];
+            var unit = '';
+            for(i=0; i<data.length; i++) {
+                label = self.data[i][0];
+                if(label) {
+                    data[i].label = label;
+                }
+                if(typeof(data[i].unit) !== 'undefined') {
+                    // Just use the last unit for now
+                    unit = data[i].unit;
+                }
+                if(!self.data[i][2]) {
+                    disabled.push(label);
+                }
+            }
+
+            $.plot(
+                self.template.find('.chart').empty().show(),
+                data, self.options);
+
+            var yaxisUnitLabel = $('<div>')
+                .text(self.siPrefix + unit)
+                .css({width: '100px',
+                      position: 'absolute',
+                      top: '80px',
+                      left: '-90px',
+                      'text-align': 'right'});
+            self.template.find('.chart').append(yaxisUnitLabel);
+
+            // Manipulate and move the flot generated legend to an
+            // alternative position.
+            // The default legend is formatted as an HTML table, so we
+            // grab the contents of the cells and turn them into
+            // divs.
+            // Actually, formatting the legend first as a one column
+            // table is useful as it generates an optimum label element
+            // width which we can copy to the new divs + a little extra
+            // to accomodate the color box
+            var legend = self.template.find('.graph-legend').show();
+            legend.empty();
+            self.template.find('.legendLabel').each(
+                function(i, el) {
+                    var orig = $(el);
+                    var label = orig.text();
+                    var newEl = $('<div />', {
+                        'class': 'legendItem',
+                        'title': ('Data series switch - ' +
+                                  'click to turn this data series on or off')
+                    })
+                        .width(orig.width()+20)
+                        .text(label)
+                        .prepend(
+                            orig.prev()
+                                .find('div div')
+                                .clone().addClass('legendColorBox'))
+                        .appendTo(legend);
+                    // The legend label is clickable - to enable /
+                    // disable different data series. The disabled class
+                    // results in a label formatted with strike though
+                    if( $.inArray(label, disabled) > -1 ) {
+                        newEl.addClass('disabled');
                     }
+                }
+            ).remove();
+            legend.append($('<div />').css('clear', 'both'));
+            self.template.find('.legend').remove();
 
-                    $.plot(self.template.find('.chart').empty().show(), data, self.options);
+            yaxisUnitLabel.position(self.template.position());
+            return data;
+        }, null)
+        .fail(
+            function(failure) {
+                self.template.find('.chart').empty().hide();
+                self.template.find('.graph-legend').empty().hide();
+                self.template.find('.error').text(
+                    'error: ' + failure.message);
 
-                    var yaxisUnitLabel = $('<div>').text(self.siPrefix + unit)
-                                                   .css({width: '100px',
-                                                         position: 'absolute',
-                                                         top: '80px',
-                                                         left: '-90px',
-                                                         'text-align': 'right'});
-                    self.template.find('.chart').append(yaxisUnitLabel);
-
-                    // Manipulate and move the flot generated legend to an
-                    // alternative position.
-                    // The default legend is formatted as an HTML table, so we
-                    // grab the contents of the cells and turn them into
-                    // divs.
-                    // Actually, formatting the legend first as a one column
-                    // table is useful as it generates an optimum label element
-                    // width which we can copy to the new divs + a little extra
-                    // to accomodate the color box
-                    var legend = self.template.find('.graph-legend').show();
-                    legend.empty();
-                    self.template.find('.legendLabel').each(
-                        function(i, el) {
-                            var orig = $(el);
-                            var label = orig.text();
-                            var newEl = $('<div />', {
-                                'class': 'legendItem',
-                                'title': 'Data series switch - click to turn \
-                                          this data series on or off'
-                            })
-                                .width(orig.width()+20)
-                                .text(label)
-                                .prepend(orig.prev().find('div div').clone().addClass('legendColorBox'))
-                                .appendTo(legend);
-                            // The legend label is clickable - to enable /
-                            // disable different data series. The disabled class
-                            // results in a label formatted with strike though
-                            if( $.inArray(label, disabled) > -1 ) {
-                                newEl.addClass('disabled');
-                            }
-                        }
-                    ).remove();
-                    legend.append($('<div />').css('clear', 'both'));
-                    self.template.find('.legend').remove();
-
-                    yaxisUnitLabel.position(self.template.position());
-                    return data;
-                }, this)
-            .addErrback(
-                function(self, failure) {
-                    self.template.find('.chart').empty().hide();
-                    self.template.find('.graph-legend').empty().hide();
-                    self.template.find('.error').text('error: ' + failure.message);
-
-                }, this)
-            .addBoth(
-                function(self, res) {
-                    self.template.removeClass('loading');
-                    return res;
-                }, this);
+            })
+        .always(
+            function(res) {
+                self.template.removeClass('loading');
+                return res;
+            });
 };
 
 
@@ -902,14 +913,15 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
         )
     ).submit(
         function(e) {
-            self.data.rrdUrl = this['rrd_url'].value;
-            $placeholder = $(this).find('.next').empty();
-            new jarmon.RrdQueryRemote(self.data.rrdUrl).getDSNames().addCallback(
+            self.data.rrdUrl = this.rrd_url.value;
+            var $placeholder = $(this).find('.next').empty();
+            new jarmon.RrdQueryRemote(
+                self.data.rrdUrl).getDSNames().addCallback(
                 function($placeholder, dsNames) {
                     if(dsNames.length > 1) {
                         $('<p/>').text(
-                            'The RRD file contains multiple data sources. \
-                             Choose one:').appendTo($placeholder);
+                            'The RRD file contains multiple data sources. ' +
+                                'Choose one:').appendTo($placeholder);
 
                         $(dsNames).map(
                             function(i, el) {
@@ -931,7 +943,8 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
                 }, $placeholder
             ).addErrback(
                 function($placeholder, err) {
-                    $('<p/>', {'class': 'error'}).text(err.toString()).appendTo($placeholder);
+                    $('<p/>', {'class': 'error'})
+                        .text(err.toString()).appendTo($placeholder);
                 }, $placeholder
             );
             return false;
@@ -974,8 +987,8 @@ jarmon.RrdChooser.prototype.drawDsLabelForm = function() {
         $('<div/>', {'class': 'next'})
     ).submit(
         function(e) {
-            self.data.dsLabel = this['dsLabel'].value;
-            self.data.dsUnit = this['dsUnit'].value;
+            self.data.dsLabel = this.dsLabel.value;
+            self.data.dsUnit = this.dsUnit.value;
             self.drawDsSummary();
             return false;
         }
@@ -1014,7 +1027,7 @@ jarmon.ChartEditor = function($tpl, chart) {
         {self: this},
         function(e) {
             var self = e.data.self;
-            self.chart.recipe.title = this['title'].value;
+            self.chart.recipe.title = this.title.value;
             self.chart.recipe.data = $(this).find('.datasources tbody tr').map(
                 function(i, el) {
                     return $(el).find('input[type=text]').map(
@@ -1227,7 +1240,7 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     $('ul.css-tabs > li > input', $tpl[0]).live(
         'keypress',
         function(e) {
-            if(e.which == 13) {
+            if(e.which === 13) {
                 $(this).blur();
             }
         }
@@ -1476,7 +1489,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
 
     options.bind('change', function(e) {
         // No point in updating if the user chose custom.
-        if($(this).val() != 'custom') {
+        if($(this).val() !== 'custom') {
             self.update();
         }
     });
@@ -1486,8 +1499,9 @@ jarmon.ChartCoordinator = function(ui, charts) {
     this.ui.find('[name="from_custom"]').bind('change',
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
-            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
-            self.setTimeRange(new Date(this.value + ' UTC').getTime() - tzoffset, null);
+            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val(), 10);
+            self.setTimeRange(
+                new Date(this.value + ' UTC').getTime() - tzoffset, null);
             self.update();
         }
     );
@@ -1495,8 +1509,9 @@ jarmon.ChartCoordinator = function(ui, charts) {
     this.ui.find('[name="to_custom"]').bind('change',
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
-            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
-            self.setTimeRange(null, new Date(this.value + ' UTC').getTime() - tzoffset);
+            var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val(), 10);
+            self.setTimeRange(
+                null, new Date(this.value + ' UTC').getTime() - tzoffset);
             self.update();
         }
     );
@@ -1515,11 +1530,12 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 label += ' - ';
             }
             val = Math.abs(val).toString();
-            if(val.length == 1) {
+            if(val.length === 1) {
                 label += '0';
             }
             label += val + '00';
-            tzoffsetEl.append($('<option />').attr('value', i*60*60*1000).text(label));
+            tzoffsetEl.append(
+                $('<option />').attr('value', i*60*60*1000).text(label));
         }
 
         tzoffsetEl.bind('change', function(e) {
@@ -1587,7 +1603,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 // returns NaN we know it's an invalid date
                 // XXX: is there a better way to check for valid date?
                 currentDate = new Date($(this).siblings(input_selector).val());
-                if(currentDate.getTime() != NaN) {
+                if(! isNaN(currentDate.getTime()) ) {
                     $(this).data(
                         'dateinput')._initial_val = currentDate.getTime();
                     $(this).data('dateinput').setValue(currentDate);
@@ -1606,7 +1622,7 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 var oldStamp = $(this).data('dateinput')._initial_val;
                 var newDate = $(this).data('dateinput').getValue();
                 // Only update the form field if the date has changed.
-                if(oldStamp != newDate.getTime()) {
+                if(oldStamp !== newDate.getTime()) {
                     // Update the prepared time range select box to
                     // value "custom"
                     self.ui.find('[name="from_standard"]').val('custom');
@@ -1658,26 +1674,28 @@ jarmon.ChartCoordinator.prototype.update = function() {
      *
      * @method update
      **/
-
+    var self = this;
     var selection = this.ui.find('[name="from_standard"]').val();
 
     var now = new Date().getTime();
     for(var i=0; i<jarmon.timeRangeShortcuts.length; i++) {
-        if(jarmon.timeRangeShortcuts[i][0] == selection) {
+        if(jarmon.timeRangeShortcuts[i][0] === selection) {
             var range = jarmon.timeRangeShortcuts[i][1](now);
             this.setTimeRange(range[0], range[1]);
             break;
         }
     }
 
-    var startTime = parseInt(this.ui.find('[name="from"]').val());
-    var endTime = parseInt(this.ui.find('[name="to"]').val());
-    var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val());
+    var startTime = parseInt(this.ui.find('[name="from"]').val(), 10);
+    var endTime = parseInt(this.ui.find('[name="to"]').val(), 10);
+    var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val(), 10);
 
     this.ui.find('[name="from_custom"]').val(
-        new Date(startTime + tzoffset).toUTCString().split(' ').slice(1,5).join(' '));
+        new Date(startTime + tzoffset)
+            .toUTCString().split(' ').slice(1,5).join(' '));
     this.ui.find('[name="to_custom"]').val(
-        new Date(endTime + tzoffset).toUTCString().split(' ').slice(1,5).join(' '));
+        new Date(endTime + tzoffset)
+            .toUTCString().split(' ').slice(1,5).join(' '));
 
     this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
 
@@ -1690,8 +1708,9 @@ jarmon.ChartCoordinator.prototype.update = function() {
                 this.charts[i].setTimeRange(startTime, endTime));
         }
     }
-    return MochiKit.Async.gatherResults(chartsLoading).addCallback(
-        function(self, startTime, endTime, chartData) {
+    return jQuery.when.apply(null, chartsLoading).done(
+        function() {
+            var chartData = Array.prototype.slice.call(arguments);
 
             var firstUpdate = new Date().getTime();
             var lastUpdate = 0;
@@ -1742,7 +1761,7 @@ jarmon.ChartCoordinator.prototype.update = function() {
                                        self.rangePreviewOptions);
 
             self.rangePreview.setSelection(ranges, true);
-        }, this, startTime, endTime);
+        });
 };
 
 jarmon.ChartCoordinator.prototype.setTimeRange = function(from, to) {
@@ -1753,10 +1772,10 @@ jarmon.ChartCoordinator.prototype.setTimeRange = function(from, to) {
      * @param startTime {Number} The start timestamp
      * @param endTime {Number} The end timestamp
      **/
-    if(from != null) {
+    if(typeof(from) !== 'undefined' && from !== null) {
         this.ui.find('[name="from"]').val(from);
     }
-    if(to != null) {
+    if(typeof(to) !== 'undefined' && to !== null) {
         this.ui.find('[name="to"]').val(to);
     }
 };
@@ -1794,23 +1813,24 @@ jarmon.Parallimiter.prototype.addCallable = function(callable, args) {
     * @return {Object} A Deferred which fires with the result of the callable
     *       when it is called.
     **/
-    var d = new MochiKit.Async.Deferred();
+    var d = new jQuery.Deferred();
     this._callQueue.unshift([d, callable, args]);
     this._nextCall();
     return d;
 };
 
 jarmon.Parallimiter.prototype._nextCall = function() {
+    var self = this;
     if(this._callQueue.length > 0) {
         if(this._currentCallCount < this.limit) {
             this._currentCallCount++;
             var nextCall = this._callQueue.pop();
-            nextCall[1].apply(null, nextCall[2]).addBoth(
-                function(self, d, res) {
-                    d.callback(res);
+            nextCall[1].apply(null, nextCall[2]).always(
+                function(res) {
+                    nextCall[0].resolve(res);
                     self._currentCallCount--;
                     self._nextCall();
-                }, this, nextCall[0]);
+                });
         }
     }
 };
