@@ -295,8 +295,10 @@ jarmon.localTimeFormatter = function (v, axis) {
     var d = new Date(v + axis.options.tzoffset);
 
     // first check global format
-    if (axis.options.timeformat != null)
-        return $.plot.formatDate(d, axis.options.timeformat, axis.options.monthNames);
+    if (axis.options.timeformat != null) {
+        return $.plot.formatDate(
+            d, axis.options.timeformat, axis.options.monthNames);
+    }
 
     var t = axis.tickSize[0] * timeUnitSize[axis.tickSize[1]];
     var span = axis.max - axis.min;
@@ -340,7 +342,8 @@ jarmon.RrdQuery = function(rrd, unit) {
     this.unit = unit;
 };
 
-jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs, dsId, cfName) {
+jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
+                                             dsId, cfName) {
     /**
      * Generate a Flot compatible data object containing rows between start and
      * end time. The rows are taken from the first RRA whose data spans the
@@ -527,7 +530,8 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
 };
 
 
-jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime, dsId, cfName) {
+jarmon.RrdQueryRemote.prototype.getData = function(startTime, endTime,
+                                                   dsId, cfName) {
     /**
      * Return a Flot compatible data series asynchronously.
      *
@@ -640,7 +644,8 @@ jarmon.Chart = function(template, recipe,  downloader) {
         var minVal = axis.min/Math.pow(1000, si);
         var maxVal = axis.max/Math.pow(1000, si);
 
-        var stepSizes = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 5, 10, 25, 50, 100, 250];
+        var stepSizes = [0.01, 0.05, 0.1, 0.25, 0.5,
+                         1, 5, 10, 25, 50, 100, 250];
         var realStep = (maxVal - minVal)/5.0;
 
         var stepSize, decimalPlaces = 0;
@@ -692,7 +697,8 @@ jarmon.Chart.prototype.setup = function() {
         var unit = recipe['data'][j][3];
 
         if(typeof dataDict[rrd] == 'undefined') {
-            dataDict[rrd] = new jarmon.RrdQueryRemote(rrd, unit, this.downloader);
+            dataDict[rrd] = new jarmon.RrdQueryRemote(
+                rrd, unit, this.downloader);
         }
         this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
     }
@@ -833,7 +839,8 @@ jarmon.Chart.prototype.draw = function() {
                     var label = orig.text();
                     var newEl = $('<div />', {
                         'class': 'legendItem',
-                        'title': 'Data series switch - click to turn this data series on or off'
+                        'title': ('Data series switch - ' +
+                                  'click to turn this data series on or off')
                     })
                         .width(orig.width()+20)
                         .text(label)
@@ -910,7 +917,8 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
         function(e) {
             self.data.rrdUrl = this['rrd_url'].value;
             $placeholder = $(this).find('.next').empty();
-            new jarmon.RrdQueryRemote(self.data.rrdUrl).getDSNames().addCallback(
+            new jarmon.RrdQueryRemote(
+                self.data.rrdUrl).getDSNames().addCallback(
                 function($placeholder, dsNames) {
                     if(dsNames.length > 1) {
                         $('<p/>').text(
@@ -937,7 +945,8 @@ jarmon.RrdChooser.prototype.drawRrdUrlForm = function() {
                 }, $placeholder
             ).addErrback(
                 function($placeholder, err) {
-                    $('<p/>', {'class': 'error'}).text(err.toString()).appendTo($placeholder);
+                    $('<p/>', {'class': 'error'})
+                        .text(err.toString()).appendTo($placeholder);
                 }, $placeholder
             );
             return false;
@@ -1493,7 +1502,8 @@ jarmon.ChartCoordinator = function(ui, charts) {
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
             var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
-            self.setTimeRange(new Date(this.value + ' UTC').getTime() - tzoffset, null);
+            self.setTimeRange(
+                new Date(this.value + ' UTC').getTime() - tzoffset, null);
             self.update();
         }
     );
@@ -1502,7 +1512,8 @@ jarmon.ChartCoordinator = function(ui, charts) {
         function(e) {
             self.ui.find('[name="from_standard"]').val('custom');
             var tzoffset = parseInt(self.ui.find('[name="tzoffset"]').val());
-            self.setTimeRange(null, new Date(this.value + ' UTC').getTime() - tzoffset);
+            self.setTimeRange(
+                null, new Date(this.value + ' UTC').getTime() - tzoffset);
             self.update();
         }
     );
@@ -1525,7 +1536,8 @@ jarmon.ChartCoordinator = function(ui, charts) {
                 label += '0';
             }
             label += val + '00';
-            tzoffsetEl.append($('<option />').attr('value', i*60*60*1000).text(label));
+            tzoffsetEl.append(
+                $('<option />').attr('value', i*60*60*1000).text(label));
         }
 
         tzoffsetEl.bind('change', function(e) {
@@ -1681,9 +1693,11 @@ jarmon.ChartCoordinator.prototype.update = function() {
     var tzoffset = parseInt(this.ui.find('[name="tzoffset"]').val());
 
     this.ui.find('[name="from_custom"]').val(
-        new Date(startTime + tzoffset).toUTCString().split(' ').slice(1,5).join(' '));
+        new Date(startTime + tzoffset)
+            .toUTCString().split(' ').slice(1,5).join(' '));
     this.ui.find('[name="to_custom"]').val(
-        new Date(endTime + tzoffset).toUTCString().split(' ').slice(1,5).join(' '));
+        new Date(endTime + tzoffset)
+            .toUTCString().split(' ').slice(1,5).join(' '));
 
     this.rangePreviewOptions.xaxis.tzoffset = tzoffset;
 
