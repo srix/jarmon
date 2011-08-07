@@ -5,14 +5,13 @@
  * based on the RRD data available on your system.
  */
 
-if(typeof jarmon == 'undefined') {
+if(typeof(jarmon) === 'undefined') {
     var jarmon = {};
 }
 
 jarmon.TAB_RECIPES_STANDARD = [
     ['System',      ['cpu', 'memory','load']],
-    ['Network',     ['interface']],
-    ['DNS',         ['dns_query_types', 'dns_return_codes']]
+    ['Network',     ['interface']]
 ];
 
 jarmon.CHART_RECIPES_COLLECTD = {
@@ -40,27 +39,6 @@ jarmon.CHART_RECIPES_COLLECTD = {
         ],
         options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS,
                                          jarmon.Chart.STACKED_OPTIONS)
-    },
-
-    'dns_query_types': {
-        title: 'DNS Query Types',
-        data: [
-            ['data/dns/dns_qtype-A.rrd', 0, 'A', 'Q/s'],
-            ['data/dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/s'],
-            ['data/dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/s'],
-            ['data/dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/s']
-        ],
-        options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
-    },
-
-    'dns_return_codes': {
-        title: 'DNS Return Codes',
-        data: [
-            ['data/dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/s'],
-            ['data/dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/s'],
-            ['data/dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/s']
-        ],
-        options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
     },
 
     'load': {
