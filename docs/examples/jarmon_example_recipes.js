@@ -54,8 +54,8 @@ jarmon.CHART_RECIPES_COLLECTD = {
     'interface': {
         title: 'Wlan0 Throughput',
         data: [
-            ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'B/s'],
-            ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'B/s']
+            ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'bit/s', function (v) { return v*8; }],
+            ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'bit/s', function (v) { return v*8; }]
         ],
         options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
     }

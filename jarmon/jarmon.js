@@ -337,10 +337,17 @@ jarmon.localTimeFormatter = function (v, axis) {
  * @constructor
  * @param rrd {Object} A javascriptrrd.RRDFile
  * @param unit {String} The unit symbol for this data series
+ * @param transformer {Function} A callable which performs a
+ *      tranfsformation of the values returned from the RRD file.
  **/
-jarmon.RrdQuery = function(rrd, unit) {
+jarmon.RrdQuery = function(rrd, unit, transformer) {
     this.rrd = rrd;
     this.unit = unit;
+    if(typeof(transformer) !== 'undefined') {
+ 	    this.transformer = transformer;
+ 	} else {
+ 	    this.transformer = function(v) {return v;};
+ 	}
 };
 
 jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
@@ -443,7 +450,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
     var val;
     var timestamp = startRowTime;
     for(i=startRowIndex; i<endRowIndex; i++) {
-        val = rra.getEl(i, dsIndex);
+        val = this.transformer(rra.getEl(i, dsIndex));
         flotData.push([timestamp*1000.0, val]);
         timestamp += step;
     }
@@ -480,11 +487,19 @@ jarmon.RrdQuery.prototype.getDSNames = function() {
  * @param unit {String} The unit suffix of this data eg 'bit/sec'
  * @param downloader {Function} A callable which returns a Deferred and calls
  *      back with a javascriptrrd.BinaryFile when it has downloaded.
+ * @param transformer {Function} A callable which performs a
+ *      tranfsformation of the values returned from the RRD file.
  **/
-jarmon.RrdQueryRemote = function(url, unit, downloader) {
+jarmon.RrdQueryRemote = function(url, unit, downloader, transformer) {
     this.url = url;
     this.unit = unit;
-    this.downloader = downloader || jarmon.downloadBinary;
+    if(typeof(downloader) == 'undefined') {
+        this.downloader = jarmon.downloadBinary;
+    } else {
+        this.downloader = downloader;
+    }
+    this.transformer = transformer;
+
     this.lastUpdate = 0;
     this._download = null;
 };
@@ -693,10 +708,11 @@ jarmon.Chart.prototype.setup = function() {
         }
         var label = recipe.data[j][2];
         var unit = recipe.data[j][3];
+        var transformer = recipe.data[j][4];
 
         if(typeof(dataDict[rrd]) === 'undefined') {
             dataDict[rrd] = new jarmon.RrdQueryRemote(
-                rrd, unit, this.downloader);
+                rrd, unit, this.downloader, transformer);
         }
         this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
     }
