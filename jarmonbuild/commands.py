@@ -1,4 +1,5 @@
-# Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+# Copyright (c) Richard Wall
+# See LICENSE for details.
 """
 Functions and Classes for automating the release of Jarmon
 """

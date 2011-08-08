@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+ * Copyright (c) Richard Wall
  * See LICENSE for details.
  *
  * Wrappers and convenience fuctions for working with the javascriptRRD, jQuery,
@@ -337,10 +337,17 @@ jarmon.localTimeFormatter = function (v, axis) {
  * @constructor
  * @param rrd {Object} A javascriptrrd.RRDFile
  * @param unit {String} The unit symbol for this data series
+ * @param transformer {Function} A callable which performs a
+ *      tranfsformation of the values returned from the RRD file.
  **/
-jarmon.RrdQuery = function(rrd, unit) {
+jarmon.RrdQuery = function(rrd, unit, transformer) {
     this.rrd = rrd;
     this.unit = unit;
+    if(typeof(transformer) !== 'undefined') {
+ 	    this.transformer = transformer;
+ 	} else {
+ 	    this.transformer = function(v) {return v;};
+ 	}
 };
 
 jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
@@ -443,7 +450,7 @@ jarmon.RrdQuery.prototype.getData = function(startTimeJs, endTimeJs,
     var val;
     var timestamp = startRowTime;
     for(i=startRowIndex; i<endRowIndex; i++) {
-        val = rra.getEl(i, dsIndex);
+        val = this.transformer(rra.getEl(i, dsIndex));
         flotData.push([timestamp*1000.0, val]);
         timestamp += step;
     }
@@ -480,11 +487,19 @@ jarmon.RrdQuery.prototype.getDSNames = function() {
  * @param unit {String} The unit suffix of this data eg 'bit/sec'
  * @param downloader {Function} A callable which returns a Deferred and calls
  *      back with a javascriptrrd.BinaryFile when it has downloaded.
+ * @param transformer {Function} A callable which performs a
+ *      tranfsformation of the values returned from the RRD file.
  **/
-jarmon.RrdQueryRemote = function(url, unit, downloader) {
+jarmon.RrdQueryRemote = function(url, unit, downloader, transformer) {
     this.url = url;
     this.unit = unit;
-    this.downloader = downloader || jarmon.downloadBinary;
+    if(typeof(downloader) == 'undefined') {
+        this.downloader = jarmon.downloadBinary;
+    } else {
+        this.downloader = downloader;
+    }
+    this.transformer = transformer;
+
     this.lastUpdate = 0;
     this._download = null;
 };
@@ -657,7 +672,7 @@ jarmon.Chart = function(template, recipe,  downloader) {
             }
         }
 
-        if(self.options.yaxis.tickDecimals !== null) {
+        if(typeof(self.options.yaxis.tickDecimals) === 'number') {
             decimalPlaces = self.options.yaxis.tickDecimals;
         }
 
@@ -693,10 +708,11 @@ jarmon.Chart.prototype.setup = function() {
         }
         var label = recipe.data[j][2];
         var unit = recipe.data[j][3];
+        var transformer = recipe.data[j][4];
 
         if(typeof(dataDict[rrd]) === 'undefined') {
             dataDict[rrd] = new jarmon.RrdQueryRemote(
-                rrd, unit, this.downloader);
+                rrd, unit, this.downloader, transformer);
         }
         this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
     }
@@ -813,10 +829,10 @@ jarmon.Chart.prototype.draw = function() {
 
             var yaxisUnitLabel = $('<div>')
                 .text(self.siPrefix + unit)
-                .css({width: '100px',
-                      position: 'absolute',
-                      top: '80px',
-                      left: '-90px',
+                .css({'width': '100px',
+                      'position': 'absolute',
+                      'top': '80px',
+                      'left': '-110px',
                       'text-align': 'right'});
             self.template.find('.chart').append(yaxisUnitLabel);
 
@@ -1178,16 +1194,6 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     this.placeholders = [];
 
     this.$tabBar = $('<ul/>', {'class': 'css-tabs'}).appendTo($tpl);
-
-    // Icon and hidden input box for adding new tabs. See event handlers below.
-    this.$newTabControls = $('<li/>', {
-        'class': 'newTabControls',
-        'title': 'Add new tab'
-    }).append(
-        $('<img/>', {src: 'assets/icons/next.gif'}),
-        $('<input/>', {'type': 'text'}).hide()
-    ).appendTo(this.$tabBar);
-
     this.$tabPanels = $('<div/>', {'class': 'css-panes charts'}).appendTo($tpl);
     var tabName, $tabPanel, placeNames;
     for(var i=0; i<recipe.length; i++) {
@@ -1203,88 +1209,6 @@ jarmon.TabbedInterface = function($tpl, recipe) {
     }
 
     this.setup();
-
-    // Show the new tab name input box when the user clicks the new tab icon
-    $('ul.css-tabs > li.newTabControls > img', $tpl[0]).live(
-        'click',
-        function(e) {
-            $(this).hide().siblings().show().focus();
-        }
-    );
-
-    // When the "new" tab input loses focus, use its value to create a new
-    // tab.
-    // XXX: Due to event bubbling, this event seems to be triggered twice, but
-    // only when the input is forcefully blurred by the "keypress" event handler
-    // below. To prevent two tabs, we blank the input field value. Tried
-    // preventing event bubbling, but there seems to be some subtle difference
-    // with the use of jquery live event handlers.
-    $('ul.css-tabs > li.newTabControls > input', $tpl[0]).live(
-        'blur',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            var value = this.value;
-            this.value = '';
-            $(this).hide().siblings().show();
-            if(value) {
-                self.newTab(value);
-                self.setup();
-                self.$tabBar.data("tabs").click(value);
-            }
-        }
-    );
-
-    // Unfocus the input element when return key is pressed. Triggers a
-    // blur event which then replaces the input with a tab
-    $('ul.css-tabs > li > input', $tpl[0]).live(
-        'keypress',
-        function(e) {
-            if(e.which === 13) {
-                $(this).blur();
-            }
-        }
-    );
-
-    // Show tab name input box when tab is double clicked.
-    $('ul.css-tabs > li > a', $tpl[0]).live(
-        'dblclick',
-        {self: this},
-        function(e) {
-            var $originalLink = $(this);
-            var $input = $('<input/>', {
-                'value': $originalLink.text(),
-                'name': 'editTabTitle',
-                'type': 'text'
-            });
-            $originalLink.replaceWith($input);
-            $input.focus();
-        }
-    );
-
-    // Handle the updating of the tab when its name is edited.
-    $('ul.css-tabs > li > input[name=editTabTitle]', $tpl[0]).live(
-        'blur',
-        {self: this},
-        function(e) {
-            var self = e.data.self;
-            $(this).replaceWith(
-                $('<a/>', {
-                    href: ['#', this.value].join('')
-                }).text(this.value)
-            );
-            self.setup();
-            self.$tabBar.data("tabs").click(this.value);
-        }
-    );
-
-    $('input[name=add_new_chart]', $tpl[0]).live(
-        'click',
-        {self: this},
-        function(e) {
-            console.log(e);
-        }
-    );
 };
 
 jarmon.TabbedInterface.prototype.newTab = function(tabName) {
@@ -1294,29 +1218,18 @@ jarmon.TabbedInterface.prototype.newTab = function(tabName) {
     ).appendTo(this.$tabBar);
     var $placeholder = $('<div/>');
     // Add tab panel
-    $('<div/>').append(
-        $placeholder,
-        $('<div/>', {'class': 'tab-controls'}).append(
-            $('<input/>', {
-                type: 'button',
-                value: 'Add new chart',
-                name: 'add_new_chart'
-            })
-        )
-    ).appendTo(this.$tabPanels);
+    $('<div/>').append($placeholder).appendTo(this.$tabPanels);
 
     return $placeholder;
 };
 
 jarmon.TabbedInterface.prototype.setup = function() {
-    this.$newTabControls.remove();
     // Destroy then re-initialise the jquerytools tabs plugin
     var api = this.$tabBar.data("tabs");
     if(api) {
         api.destroy();
     }
     this.$tabBar.tabs(this.$tabPanels.children('div'));
-    this.$newTabControls.appendTo(this.$tabBar);
 };
 
 

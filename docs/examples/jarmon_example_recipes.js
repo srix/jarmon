@@ -1,18 +1,17 @@
-/* Copyright (c) 2010 Richard Wall <richard (at) the-moon.net>
+/* Copyright (c) Richard Wall
  * See LICENSE for details.
  *
  * Some example recipes for Collectd RRD data - you *will* need to modify this
  * based on the RRD data available on your system.
  */
 
-if(typeof jarmon == 'undefined') {
+if(typeof(jarmon) === 'undefined') {
     var jarmon = {};
 }
 
 jarmon.TAB_RECIPES_STANDARD = [
     ['System',      ['cpu', 'memory','load']],
-    ['Network',     ['interface']],
-    ['DNS',         ['dns_query_types', 'dns_return_codes']]
+    ['Network',     ['interface']]
 ];
 
 jarmon.CHART_RECIPES_COLLECTD = {
@@ -42,27 +41,6 @@ jarmon.CHART_RECIPES_COLLECTD = {
                                          jarmon.Chart.STACKED_OPTIONS)
     },
 
-    'dns_query_types': {
-        title: 'DNS Query Types',
-        data: [
-            ['data/dns/dns_qtype-A.rrd', 0, 'A', 'Q/s'],
-            ['data/dns/dns_qtype-PTR.rrd', 0, 'PTR', 'Q/s'],
-            ['data/dns/dns_qtype-SOA.rrd', 0, 'SOA', 'Q/s'],
-            ['data/dns/dns_qtype-SRV.rrd', 0, 'SRV', 'Q/s']
-        ],
-        options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
-    },
-
-    'dns_return_codes': {
-        title: 'DNS Return Codes',
-        data: [
-            ['data/dns/dns_rcode-NOERROR.rrd', 0, 'NOERROR', 'Q/s'],
-            ['data/dns/dns_rcode-NXDOMAIN.rrd', 0, 'NXDOMAIN', 'Q/s'],
-            ['data/dns/dns_rcode-SERVFAIL.rrd', 0, 'SERVFAIL', 'Q/s']
-        ],
-        options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
-    },
-
     'load': {
         title: 'Load Average',
         data: [
@@ -76,8 +54,8 @@ jarmon.CHART_RECIPES_COLLECTD = {
     'interface': {
         title: 'Wlan0 Throughput',
         data: [
-            ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'b/s'],
-            ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'b/s']
+            ['data/interface/if_octets-wlan0.rrd', 'tx', 'Transmit', 'bit/s', function (v) { return v*8; }],
+            ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'bit/s', function (v) { return v*8; }]
         ],
         options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
     }
