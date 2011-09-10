@@ -281,7 +281,35 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
                     });
                 });
             this.wait();
+        },
+
+        _x10transformer: function(v) {
+            return v * 10;
+        },
+
+        test_transformerFunction: function () {
+            /**
+             * RrdQuery can be passed a transformer function which may
+             * manipulate the values from the RRDFile
+             **/
+            var self = this;
+            this.d.done(
+                function(rrd) {
+                    self.resume(function() {
+                        var rq = new jarmon.RrdQuery(rrd, '', self._x10transformer);
+                        var data = rq.getData(RRD_STARTTIME, RRD_ENDTIME);
+                        // Make sure that the transformer is the
+                        // function we asked for
+                        Y.Assert.areEqual(self._x10transformer, rq.transformer);
+                        // Real data goes 0,1,2,3...
+                        // should be transformed to 0,10,20...
+                        Y.Assert.areEqual(0, data.data[0][1]);
+                        Y.Assert.areEqual(10, data.data[1][1]);
+                    });
+                });
+            this.wait();
         }
+
 
     }));
 
@@ -387,115 +415,6 @@ YUI({ logInclude: { TestRunner: true } }).use('console', 'test', function(Y) {
         }
     }));
 
-
-    Y.Test.Runner.add(new Y.Test.Case({
-        name: "jarmon.Chart",
-
-        test_draw: function () {
-            /**
-             * Test that a rendered chart has the correct dimensions, legend,
-             * axis, labels etc
-             **/
-            var self = this;
-            var $tpl = $(
-                '<div><div class="chart"></div></div>').appendTo($('body'));
-            var c = new jarmon.Chart($tpl, jarmon.Chart.BASE_OPTIONS);
-            //
-            c.options.xaxis.tzoffset = 0;
-            c.addData(
-                'speed',
-                new jarmon.RrdQueryRemote('build/test.rrd', 'm/s'),
-                true);
-            var d = c.setTimeRange(RRD_STARTTIME, RRD_ENDTIME);
-            d.done(
-                function() {
-                    self.resume(function() {
-                        // TODO: write useful tests
-                    });
-                });
-            this.wait();
-        }
-    }));
-
-
-    Y.Test.Runner.add(new Y.Test.Case({
-        name: "jarmon.RrdChooser",
-
-        setUp: function() {
-            this.$tpl = $('<div/>').appendTo($('body'));
-            var c = new jarmon.RrdChooser(this.$tpl);
-            c.drawRrdUrlForm();
-        },
-
-        test_drawInitialForm: function () {
-            /**
-             * Test that the initial config form contains an rrd form field
-             **/
-            Y.Assert.areEqual(
-                this.$tpl.find('form input[name=rrd_url]').size(), 1);
-        },
-
-        test_drawUrlErrorMessage: function () {
-            /**
-             * Test that submitting the form with an incorrect url results in
-             * an error message
-             **/
-            var self = this;
-            this.$tpl.find('form input[name=rrd_url]').val('Foo/Bar').submit();
-            this.wait(
-                function() {
-                    Y.Assert.areEqual(self.$tpl.find('.error').size(), 1);
-                }, 1000);
-        },
-
-        test_drawUrlListDatasources: function () {
-            /**
-             * Test that submitting the form with an correct rrd url results in
-             * list of further DS  label fields
-             **/
-            var self = this;
-            this.$tpl.find(
-                'form input[name=rrd_url]').val('build/test.rrd').submit();
-            this.wait(
-                function() {
-                    Y.Assert.areEqual(
-                        self.$tpl.find('input[name=rrd_ds_label]').size(), 1);
-                }, 1000
-            );
-        }
-    }));
-
-
-    Y.Test.Runner.add(new Y.Test.Case({
-        name: "jarmon.ChartEditor",
-
-        setUp: function() {
-            this.$tpl = $('<div/>').appendTo($('body'));
-            var c = new jarmon.ChartEditor(
-                this.$tpl,
-                {
-                    title: 'Foo',
-                    datasources: [
-                        ['data/cpu-0/cpu-wait.rrd', 0, 'CPU-0 Wait', '%'],
-                        ['data/cpu-1/cpu-wait.rrd', 0, 'CPU-1 Wait', '%'],
-                        ['data/cpu-0/cpu-system.rrd', 0, 'CPU-0 System', '%'],
-                        ['data/cpu-1/cpu-system.rrd', 0, 'CPU-1 System', '%'],
-                        ['data/cpu-0/cpu-user.rrd', 0, 'CPU-0 User', '%'],
-                        ['data/cpu-1/cpu-user.rrd', 0, 'CPU-1 User', '%']
-                    ]
-                }
-            );
-            c.draw();
-        },
-
-        test_drawInitialForm: function () {
-            /**
-             * Test that the initial config form contains an rrd form field
-             **/
-            Y.Assert.areEqual(
-                this.$tpl.find('form input[name=rrd_url]').size(), 1);
-        }
-    }));
 
 
     //initialize the console
