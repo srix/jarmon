@@ -1229,9 +1229,8 @@ jarmon.TabbedInterface.prototype.setup = function() {
     if(api) {
         api.destroy();
     }
-    this.$tabBar.tabs(this.$tabPanels.children('div'));
+    this.$tabBar.tabs(this.$tabPanels.children('div'), {history: true});
 };
-
 
 jarmon.buildTabbedChartUi = function ($chartTemplate, chartRecipes,
                                       $tabTemplate, tabRecipes,
