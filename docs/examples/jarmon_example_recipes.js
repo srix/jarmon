@@ -58,5 +58,16 @@ jarmon.CHART_RECIPES_COLLECTD = {
             ['data/interface/if_octets-wlan0.rrd', 'rx', 'Receive', 'bit/s', function (v) { return v*8; }]
         ],
         options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
+    },
+
+    'droprate': {
+        title: 'Ping Droprate',
+        data: [
+            ['data/ping/ping_droprate-google.com.rrd', 0,
+             'google.com', '%', function (v) { return v*100; }],
+            ['data/ping/ping_droprate-softlayer.com.rrd', 0,
+             'softlayer.com', '%', function (v) { return v*100; }]
+        ],
+        options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS)
     }
 };

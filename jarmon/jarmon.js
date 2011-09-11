@@ -529,7 +529,7 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
                 var rrd = new RRDFile(res);
                 self.lastUpdate = rrd.getLastUpdate();
 
-                var rq = new jarmon.RrdQuery(rrd, self.unit);
+                var rq = new jarmon.RrdQuery(rrd, self.unit, self.transformer);
                 try {
                     ret.resolve(rq[methodName].apply(rq, args));
                 } catch(e) {
