@@ -522,7 +522,19 @@ jarmon.RrdQueryRemote.prototype._callRemote = function(methodName, args) {
     this._download.always(
         function(res) {
             if(res instanceof Error) {
-                ret.reject(res);
+                //ret.reject(res);
+                  result = {
+                data: [
+                    [args[0], 0],
+                    [args[1], 0]
+                ],
+                lines: {
+                    lineWidth: 0
+                }
+            };
+                ret.resolve(result);
+                return result;
+
             } else {
                 // Upon successful download convert the resulting binary
                 // into an RRD file
