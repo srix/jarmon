@@ -722,11 +722,13 @@ jarmon.Chart.prototype.setup = function() {
         var unit = recipe.data[j][3];
         var transformer = recipe.data[j][4];
 
-        if(typeof(dataDict[rrd]) === 'undefined') {
-            dataDict[rrd] = new jarmon.RrdQueryRemote(
+        var key = rrd + "_" + ds;
+
+        if(typeof(dataDict[key]) === 'undefined') {
+            dataDict[key] = new jarmon.RrdQueryRemote(
                 rrd, unit, this.downloader, transformer);
         }
-        this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[rrd], ds));
+        this.addData(label, new jarmon.RrdQueryDsProxy(dataDict[key], ds));
     }
 };
 
